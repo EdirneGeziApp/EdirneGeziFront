@@ -43,6 +43,7 @@ class _HomePageState extends State<HomePage> {
         _isLoading = false;
       });
     } catch (e) {
+      debugPrint("Veri yükleme hatası: $e");
       setState(() => _isLoading = false);
     }
   }
@@ -52,11 +53,11 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _filteredPlaces = _allPlaces.where((place) {
         final nameMatch = place.name.toLowerCase().contains(
-          query.toLowerCase(),
-        );
+              query.toLowerCase(),
+            );
         final categoryMatch =
             (_selectedCategoryId == 0 ||
-            place.categoryId == _selectedCategoryId);
+                place.categoryId == _selectedCategoryId);
         return nameMatch && categoryMatch;
       }).toList();
     });
@@ -75,7 +76,6 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: Colors.red[900],
         centerTitle: true,
-        // Arama yapılıyorsa TextField, yapılmıyorsa Başlık göster
         title: _isSearching
             ? TextField(
                 controller: _searchController,
@@ -123,11 +123,14 @@ class _HomePageState extends State<HomePage> {
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
+                    // "Tümü" + Kategoriler
                     itemCount: _categories.length + 1,
                     itemBuilder: (context, index) {
                       if (index == 0) return _buildCategoryChip("Tümü", 0);
+                      
                       final cat = _categories[index - 1];
-                      return _buildCategoryChip(cat.name, cat.id);
+                      // DÜZELTME: cat.name'in dolu olduğundan emin oluyoruz
+                      return _buildCategoryChip(cat.name.toString(), cat.id);
                     },
                   ),
                 ),
@@ -161,7 +164,7 @@ class _HomePageState extends State<HomePage> {
           color: isSelected ? Colors.red[900] : Colors.grey[200],
           borderRadius: BorderRadius.circular(20),
           boxShadow: isSelected
-              ? [BoxShadow(color: Colors.black26, blurRadius: 4)]
+              ? [const BoxShadow(color: Colors.black26, blurRadius: 4)]
               : null,
         ),
         child: Center(
@@ -183,10 +186,8 @@ class _HomePageState extends State<HomePage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       elevation: 5,
       child: InkWell(
-        // Tıklama efekti için ListTile yerine InkWell kullandık
         borderRadius: BorderRadius.circular(15),
         onTap: () {
-          // DETAY SAYFASINA GİDİŞ
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -201,6 +202,7 @@ class _HomePageState extends State<HomePage> {
                 top: Radius.circular(15),
               ),
               child: Image.network(
+                // IP ADRESİ KONTROLÜ: api_constants içindeki 10.0.2.2 ayarı burada otomatik çalışır
                 place.imageUrl ?? 'https://via.placeholder.com/400x200',
                 height: 180,
                 width: double.infinity,
@@ -208,7 +210,13 @@ class _HomePageState extends State<HomePage> {
                 errorBuilder: (c, e, s) => Container(
                   height: 180,
                   color: Colors.grey[300],
-                  child: const Icon(Icons.image_not_supported, size: 50),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                      Text("Resim yüklenemedi", style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
                 ),
               ),
             ),

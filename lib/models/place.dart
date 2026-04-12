@@ -2,7 +2,7 @@ class Place {
   final int id;
   final String name;
   final String description;
-  final String? imageUrl;
+  String? imageUrl;
   final int categoryId;
   final double latitude;
   final double longitude;

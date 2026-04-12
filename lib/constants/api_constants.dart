@@ -1,10 +1,7 @@
-import 'dart:io';
-
 class ApiConstants {
-  // Emülatör (Pixel 8) için bu özel IP adresi şarttır
-  static const String baseUrl = "http://10.0.2.2:5174/api"; 
+  static const String baseUrl = "http://10.0.2.2:5174/api";
+  static const String imageBaseUrl = "http://10.0.2.2:5174";
 }
-
 /*
 class ApiConstants {
   // Emülatörler için doğru localhost adresini otomatik seçen yapı
