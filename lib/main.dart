@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import 'pages/home_page.dart'; // Yeni oluşturduğun sayfayı bağladık
+import 'package:shared_preferences/shared_preferences.dart';
+import 'pages/main_page.dart';
+import 'pages/login_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('isLoggedIn', false);
   runApp(const MyApp());
 }
 
@@ -14,12 +19,11 @@ class MyApp extends StatelessWidget {
       title: 'Edirne Gezi Rehberi',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // Edirne'ye yakışır bir kırmızı tema
         primarySwatch: Colors.red,
         useMaterial3: true,
+        scaffoldBackgroundColor: Colors.grey[100],
       ),
-      // Uygulama artık TestPage yerine senin havalı HomePage'inden açılacak
-      home: const HomePage(), 
+      home: const LoginPage(),
     );
   }
 }
