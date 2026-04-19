@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'main_page.dart';
 import 'register_page.dart';
+import 'admin_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -53,11 +54,19 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString('userName', result['userName']);
         await prefs.setString('userEmail', _emailController.text.trim());
         await prefs.setBool('isLoggedIn', true);
+        await prefs.setBool('isAdmin', result['isAdmin'] ?? false);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainPage()),
-        );
+        if (result['isAdmin'] == true) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminPage()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainPage()),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

@@ -131,4 +131,112 @@ class ApiService {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
+
+  // Admin: Tüm kullanıcıları getir
+  Future<List<Map<String, dynamic>>> getUsers() async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Auth/users');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Admin: Kullanıcı sil
+  Future<bool> deleteUser(int userId) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Auth/users/$userId');
+    try {
+      final response = await http.delete(url);
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Admin: Tüm yorumları getir
+  Future<List<Map<String, dynamic>>> getAllReviews() async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Places/allreviews');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Admin: Yorum sil
+  Future<bool> deleteReview(int placeId, int reviewId) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Places/$placeId/reviews/$reviewId');
+    try {
+      final response = await http.delete(url);
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Admin: Mekan sil
+  Future<bool> deletePlace(int placeId) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Places/$placeId');
+    try {
+      final response = await http.delete(url);
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Admin: İstatistikler
+  Future<Map<String, dynamic>> getStats() async {
+    try {
+      final results = await Future.wait([
+        getPlaces(),
+        getUsers(),
+        getAllReviews(),
+      ]);
+      final places = results[0] as List<Place>;
+      final users = results[1] as List<Map<String, dynamic>>;
+      final reviews = results[2] as List<Map<String, dynamic>>;
+
+      // En çok yorum alan mekan
+      final reviewCounts = <int, int>{};
+      for (var r in reviews) {
+        final pid = r['placeId'] as int? ?? 0;
+        reviewCounts[pid] = (reviewCounts[pid] ?? 0) + 1;
+      }
+
+      Place? mostReviewed;
+      if (reviewCounts.isNotEmpty && places.isNotEmpty) {
+        final topId = reviewCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+        try {
+          mostReviewed = places.firstWhere((p) => p.id == topId);
+        } catch (_) {}
+      }
+
+      return {
+        'totalPlaces': places.length,
+        'totalUsers': users.length,
+        'totalReviews': reviews.length,
+        'mostReviewedPlace': mostReviewed?.name ?? 'Henüz yorum yok',
+        'mostReviewedCount': mostReviewed != null ? (reviewCounts[mostReviewed.id] ?? 0) : 0,
+      };
+    } catch (e) {
+      return {
+        'totalPlaces': 0,
+        'totalUsers': 0,
+        'totalReviews': 0,
+        'mostReviewedPlace': '-',
+        'mostReviewedCount': 0,
+      };
+    }
+  }
 }
