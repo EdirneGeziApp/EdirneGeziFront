@@ -1,17 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'pages/main_page.dart';
 import 'pages/login_page.dart';
+import 'pages/admin_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   final prefs = await SharedPreferences.getInstance();
-  await prefs.setBool('isLoggedIn', false);
-  runApp(const MyApp());
+
+  final bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+  final bool isAdmin = prefs.getBool('isAdmin') ?? false;
+  final String? token = prefs.getString('token');
+
+  runApp(
+    MyApp(
+      isLoggedIn: isLoggedIn && token != null && token.isNotEmpty,
+      isAdmin: isAdmin,
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+  final bool isAdmin;
+
+  const MyApp({
+    super.key,
+    required this.isLoggedIn,
+    required this.isAdmin,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +42,9 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.grey[100],
       ),
-      home: const LoginPage(),
+      home: isLoggedIn
+          ? (isAdmin ? const AdminPage() : const MainPage())
+          : const LoginPage(),
     );
   }
 }
