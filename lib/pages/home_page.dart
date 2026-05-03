@@ -19,7 +19,7 @@ class _HomePageState extends State<HomePage> {
   List<Place> _allPlaces = [];
   List<Place> _filteredPlaces = [];
   List<Category> _categories = [];
-  List<String> _favoriteIds = [];
+  List<int> _favoriteIds = [];
   int _selectedCategoryId = 0;
   bool _isLoading = true;
   bool _showOnlyFavorites = false;
@@ -121,28 +121,31 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadFavorites() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() => _favoriteIds = prefs.getStringList('favorites') ?? []);
+    final ids = await _apiService.getFavoriteIds();
+    setState(() => _favoriteIds = ids);
   }
 
-  Future<void> _toggleFavorite(String placeId) async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      if (_favoriteIds.contains(placeId)) {
-        _favoriteIds.remove(placeId);
-      } else {
-        _favoriteIds.add(placeId);
-      }
-    });
-    await prefs.setStringList('favorites', _favoriteIds);
+  Future<void> _toggleFavorite(int placeId) async {
+    bool isFav = _favoriteIds.contains(placeId);
+
+    if (isFav) {
+      await _apiService.removeFavorite(placeId);
+    } else {
+      await _apiService.addFavorite(placeId);
+    }
+
+    await _loadFavorites();
   }
 
   void _runFilter(String query) {
     setState(() {
       _filteredPlaces = _allPlaces.where((place) {
-        final nameMatch = place.name.toLowerCase().contains(query.toLowerCase());
-        final categoryMatch = _selectedCategoryId == 0 || place.categoryId == _selectedCategoryId;
-        final favMatch = !_showOnlyFavorites || _favoriteIds.contains(place.id.toString());
+        final nameMatch = place.name.toLowerCase().contains(
+          query.toLowerCase(),
+        );
+        final categoryMatch =
+            _selectedCategoryId == 0 || place.categoryId == _selectedCategoryId;
+        final favMatch = !_showOnlyFavorites || _favoriteIds.contains(place.id);
         return nameMatch && categoryMatch && favMatch;
       }).toList();
     });
@@ -173,7 +176,11 @@ class _HomePageState extends State<HomePage> {
                 colors: [Colors.red[900]!, Colors.red[700]!],
               ),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 4)),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
             child: SafeArea(
@@ -192,17 +199,27 @@ class _HomePageState extends State<HomePage> {
                           children: [
                             Text(
                               'Merhaba, $_userName! 👋',
-                              style: const TextStyle(color: Colors.white70, fontSize: 14),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             const Text(
                               "Edirne'yi Keşfet",
-                              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(16),
@@ -216,11 +233,18 @@ class _HomePageState extends State<HomePage> {
                                 children: [
                                   Text(
                                     _weatherTemp,
-                                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   Text(
                                     _weatherDesc,
-                                    style: const TextStyle(color: Colors.white70, fontSize: 10),
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -238,7 +262,10 @@ class _HomePageState extends State<HomePage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                          ),
                         ],
                       ),
                       child: TextField(
@@ -247,9 +274,14 @@ class _HomePageState extends State<HomePage> {
                         decoration: InputDecoration(
                           hintText: 'Mekan veya lezzet ara...',
                           hintStyle: TextStyle(color: Colors.grey[400]),
-                          prefixIcon: Icon(Icons.search, color: Colors.red[900]),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: Colors.red[900],
+                          ),
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                          ),
                         ),
                       ),
                     ),
@@ -272,11 +304,13 @@ class _HomePageState extends State<HomePage> {
                   _buildFavChip(),
                   const SizedBox(width: 6),
                   _buildCategoryChip('Tümü', 0, Icons.apps_rounded),
-                  ...(_categories.map((cat) => _buildCategoryChip(
-                        cat.name,
-                        cat.id,
-                        _categoryIcons[cat.id] ?? Icons.place_rounded,
-                      ))),
+                  ...(_categories.map(
+                    (cat) => _buildCategoryChip(
+                      cat.name,
+                      cat.id,
+                      _categoryIcons[cat.id] ?? Icons.place_rounded,
+                    ),
+                  )),
                 ],
               ),
             ),
@@ -293,51 +327,72 @@ class _HomePageState extends State<HomePage> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredPlaces.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.search_off_rounded, size: 60, color: Colors.grey[400]),
-                              const SizedBox(height: 12),
-                              Text(
-                                _showOnlyFavorites ? 'Henüz favori eklemediniz.' : 'Sonuç bulunamadı.',
-                                style: TextStyle(color: Colors.grey[500], fontSize: 16),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off_rounded,
+                            size: 60,
+                            color: Colors.grey[400],
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-                          itemCount: _filteredPlaces.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == 0) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      _showOnlyFavorites ? '❤️ Favorilerim' : '📍 Tüm Mekanlar',
-                                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red[50],
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        '${_filteredPlaces.length} mekan',
-                                        style: TextStyle(color: Colors.red[900], fontWeight: FontWeight.bold, fontSize: 13),
-                                      ),
-                                    ),
-                                  ],
+                          const SizedBox(height: 12),
+                          Text(
+                            _showOnlyFavorites
+                                ? 'Henüz favori eklemediniz.'
+                                : 'Sonuç bulunamadı.',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+                      itemCount: _filteredPlaces.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _showOnlyFavorites
+                                      ? '❤️ Favorilerim'
+                                      : '📍 Tüm Mekanlar',
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              );
-                            }
-                            return _buildPlaceCard(_filteredPlaces[index - 1]);
-                          },
-                        ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[50],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${_filteredPlaces.length} mekan',
+                                    style: TextStyle(
+                                      color: Colors.red[900],
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        return _buildPlaceCard(_filteredPlaces[index - 1]);
+                      },
+                    ),
             ),
           ),
         ],
@@ -355,11 +410,17 @@ class _HomePageState extends State<HomePage> {
         decoration: BoxDecoration(
           color: _showOnlyFavorites ? Colors.red[900] : Colors.grey[100],
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _showOnlyFavorites ? Colors.red[900]! : Colors.grey[300]!),
+          border: Border.all(
+            color: _showOnlyFavorites ? Colors.red[900]! : Colors.grey[300]!,
+          ),
         ),
         child: Row(
           children: [
-            Icon(Icons.favorite_rounded, size: 16, color: _showOnlyFavorites ? Colors.white : Colors.red[900]),
+            Icon(
+              Icons.favorite_rounded,
+              size: 16,
+              color: _showOnlyFavorites ? Colors.white : Colors.red[900],
+            ),
             const SizedBox(width: 5),
             Text(
               'Favoriler',
@@ -386,11 +447,17 @@ class _HomePageState extends State<HomePage> {
         decoration: BoxDecoration(
           color: isSelected ? Colors.red[900] : Colors.grey[100],
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? Colors.red[900]! : Colors.grey[300]!),
+          border: Border.all(
+            color: isSelected ? Colors.red[900]! : Colors.grey[300]!,
+          ),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.red[900]),
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.white : Colors.red[900],
+            ),
             const SizedBox(width: 5),
             Text(
               label,
@@ -407,12 +474,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildPlaceCard(Place place) {
-    bool isFav = _favoriteIds.contains(place.id.toString());
+    bool isFav = _favoriteIds.contains(place.id);
     return GestureDetector(
       onTap: () async {
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PlaceDetailPage(place: place)),
+          MaterialPageRoute(
+            builder: (context) => PlaceDetailPage(place: place),
+          ),
         );
         _loadFavorites();
       },
@@ -422,7 +491,11 @@ class _HomePageState extends State<HomePage> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Column(
@@ -431,7 +504,9 @@ class _HomePageState extends State<HomePage> {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
                   child: Image.network(
                     place.imageUrl ?? '',
                     height: 200,
@@ -440,7 +515,11 @@ class _HomePageState extends State<HomePage> {
                     errorBuilder: (c, e, s) => Container(
                       height: 200,
                       color: Colors.grey[200],
-                      child: Icon(Icons.image_not_supported_rounded, size: 50, color: Colors.grey[400]),
+                      child: Icon(
+                        Icons.image_not_supported_rounded,
+                        size: 50,
+                        color: Colors.grey[400],
+                      ),
                     ),
                   ),
                 ),
@@ -448,17 +527,26 @@ class _HomePageState extends State<HomePage> {
                   top: 12,
                   left: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.red[900],
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      _categories.firstWhere(
-                        (c) => c.id == place.categoryId,
-                        orElse: () => Category(id: 0, name: 'Diğer'),
-                      ).name,
-                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      _categories
+                          .firstWhere(
+                            (c) => c.id == place.categoryId,
+                            orElse: () => Category(id: 0, name: 'Diğer'),
+                          )
+                          .name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -466,16 +554,23 @@ class _HomePageState extends State<HomePage> {
                   top: 8,
                   right: 8,
                   child: GestureDetector(
-                    onTap: () => _toggleFavorite(place.id.toString()),
+                    onTap: () => _toggleFavorite(place.id),
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6)],
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 6,
+                          ),
+                        ],
                       ),
                       child: Icon(
-                        isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        isFav
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
                         color: Colors.red[900],
                         size: 20,
                       ),
@@ -489,24 +584,45 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(place.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                  Text(
+                    place.name,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     place.description,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.4),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Icon(Icons.location_on_rounded, size: 14, color: Colors.red[900]),
+                      Icon(
+                        Icons.location_on_rounded,
+                        size: 14,
+                        color: Colors.red[900],
+                      ),
                       const SizedBox(width: 4),
-                      const Text('Edirne', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const Text(
+                        'Edirne',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                       const Spacer(),
                       Text(
                         'Detayları Gör →',
-                        style: TextStyle(fontSize: 13, color: Colors.red[900], fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.red[900],
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),

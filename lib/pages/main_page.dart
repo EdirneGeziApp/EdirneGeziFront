@@ -3,6 +3,7 @@ import 'home_page.dart';
 import 'explore_page.dart';
 import 'map_page.dart';
 import 'profile_page.dart';
+import 'favorites_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -18,6 +19,7 @@ class _MainPageState extends State<MainPage> {
     const HomePage(),
     const ExplorePage(),
     const MapPage(),
+    const FavoritesPage(),
     const ProfilePage(),
   ];
 
@@ -33,12 +35,31 @@ class _MainPageState extends State<MainPage> {
         unselectedItemColor: Colors.grey,
         backgroundColor: Colors.white,
         elevation: 10,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Ana Sayfa'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore_rounded), label: 'Keşfet'),
-          BottomNavigationBarItem(icon: Icon(Icons.map_rounded), label: 'Harita'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profil'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_rounded),
+            label: 'Ana Sayfa',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore_rounded),
+            label: 'Keşfet',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map_rounded),
+            label: 'Harita',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite_rounded),
+            label: 'Favoriler',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_rounded),
+            label: 'Profil',
+          ),
         ],
       ),
     );

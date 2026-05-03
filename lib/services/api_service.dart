@@ -8,9 +8,7 @@ import '../constants/api_constants.dart';
 
 class ApiService {
   Future<Map<String, String>> _getHeaders({bool withAuth = false}) async {
-    final headers = {
-      "Content-Type": "application/json",
-    };
+    final headers = {"Content-Type": "application/json"};
 
     if (withAuth) {
       final prefs = await SharedPreferences.getInstance();
@@ -144,10 +142,7 @@ class ApiService {
       final response = await http.post(
         url,
         headers: await _getHeaders(),
-        body: jsonEncode({
-          "email": email,
-          "password": password,
-        }),
+        body: jsonEncode({"email": email, "password": password}),
       );
 
       if (response.statusCode == 200) {
@@ -157,7 +152,9 @@ class ApiService {
           final body = json.decode(response.body);
           throw Exception(body is String ? body : "Giriş başarısız.");
         } catch (_) {
-          throw Exception(response.body.isNotEmpty ? response.body : "Giriş başarısız.");
+          throw Exception(
+            response.body.isNotEmpty ? response.body : "Giriş başarısız.",
+          );
         }
       }
     } catch (e) {
@@ -190,7 +187,9 @@ class ApiService {
           final body = json.decode(response.body);
           throw Exception(body is String ? body : "Kayıt başarısız.");
         } catch (_) {
-          throw Exception(response.body.isNotEmpty ? response.body : "Kayıt başarısız.");
+          throw Exception(
+            response.body.isNotEmpty ? response.body : "Kayıt başarısız.",
+          );
         }
       }
     } catch (e) {
@@ -327,8 +326,9 @@ class ApiService {
         'totalUsers': users.length,
         'totalReviews': reviews.length,
         'mostReviewedPlace': mostReviewed?.name ?? 'Henüz yorum yok',
-        'mostReviewedCount':
-            mostReviewed != null ? (reviewCounts[mostReviewed.id] ?? 0) : 0,
+        'mostReviewedCount': mostReviewed != null
+            ? (reviewCounts[mostReviewed.id] ?? 0)
+            : 0,
       };
     } catch (e) {
       return {
@@ -338,6 +338,175 @@ class ApiService {
         'mostReviewedPlace': '-',
         'mostReviewedCount': 0,
       };
+    }
+  }
+
+  // FAVORİLER
+
+  Future<List<int>> getFavoriteIds() async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Favorites/ids');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: await _getHeaders(withAuth: true),
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((e) => e as int).toList();
+      }
+
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<Place>> getFavorites() async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Favorites');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: await _getHeaders(withAuth: true),
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+
+        return data.map((item) {
+          var place = Place.fromJson(item);
+
+          if (place.imageUrl != null &&
+              place.imageUrl!.trim().isNotEmpty &&
+              !place.imageUrl!.toLowerCase().startsWith('http')) {
+            place.imageUrl = "${ApiConstants.imageBaseUrl}/${place.imageUrl}";
+          }
+
+          return place;
+        }).toList();
+      }
+
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> addFavorite(int placeId) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Favorites/$placeId');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: await _getHeaders(withAuth: true),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> removeFavorite(int placeId) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Favorites/$placeId');
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: await _getHeaders(withAuth: true),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // MEKAN ÖNERİLERİ
+
+  Future<bool> createPlaceSuggestion({
+    required String name,
+    required String description,
+    required int categoryId,
+    required double latitude,
+    required double longitude,
+    String? imageUrl,
+  }) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/PlaceSuggestions');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: await _getHeaders(withAuth: true),
+        body: jsonEncode({
+          "name": name,
+          "description": description,
+          "categoryId": categoryId,
+          "latitude": latitude,
+          "longitude": longitude,
+          "imageUrl": imageUrl,
+        }),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPlaceSuggestions() async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/PlaceSuggestions');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: await _getHeaders(withAuth: true),
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      }
+
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> approvePlaceSuggestion(int id) async {
+    final url = Uri.parse(
+      '${ApiConstants.baseUrl}/PlaceSuggestions/$id/approve',
+    );
+
+    try {
+      final response = await http.put(
+        url,
+        headers: await _getHeaders(withAuth: true),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> rejectPlaceSuggestion(int id) async {
+    final url = Uri.parse(
+      '${ApiConstants.baseUrl}/PlaceSuggestions/$id/reject',
+    );
+
+    try {
+      final response = await http.put(
+        url,
+        headers: await _getHeaders(withAuth: true),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
     }
   }
 }

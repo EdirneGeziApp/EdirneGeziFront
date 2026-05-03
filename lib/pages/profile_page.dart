@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_page.dart';
+import 'suggest_place_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -52,19 +53,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final firstLetter = _userName.isNotEmpty
-        ? _userName[0].toUpperCase()
-        : 'G';
+    final firstLetter = _userName.isNotEmpty ? _userName[0].toUpperCase() : 'G';
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: Text(
           'Profil',
-          style: TextStyle(
-            color: Colors.red[900],
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.red[900], fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: Colors.white,
@@ -91,20 +87,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
             Text(
               _userName,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 6),
 
             Text(
               _userEmail,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
 
             const SizedBox(height: 40),
@@ -125,10 +115,31 @@ class _ProfilePageState extends State<ProfilePage> {
               icon: const Icon(Icons.logout_rounded),
               label: const Text(
                 'Çıkış Yap',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[900],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 14,
                 ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SuggestPlacePage()),
+                );
+              },
+              icon: const Icon(Icons.add_location_alt_rounded),
+              label: const Text(
+                'Mekan Öner',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ],

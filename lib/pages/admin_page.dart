@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../models/place.dart';
 import 'login_page.dart';
+import 'suggestion_management_page.dart';
 
 class AdminPage extends StatelessWidget {
   const AdminPage({super.key});
@@ -13,7 +14,10 @@ class AdminPage extends StatelessWidget {
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: Colors.red[900],
-        title: const Text('Admin Paneli', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Admin Paneli',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         actions: [
           IconButton(
@@ -41,10 +45,17 @@ class AdminPage extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               'Hoş geldin, Admin! 👋',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red[900]),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.red[900],
+              ),
             ),
             const SizedBox(height: 6),
-            Text('Ne yapmak istersin?', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+            Text(
+              'Ne yapmak istersin?',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
             const SizedBox(height: 24),
             Expanded(
               child: GridView.count(
@@ -58,7 +69,10 @@ class AdminPage extends StatelessWidget {
                     title: 'Kullanıcı\nYönetimi',
                     subtitle: 'Kullanıcıları listele ve yönet',
                     color: const Color(0xFF1A5276),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminUsersPage())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AdminUsersPage()),
+                    ),
                   ),
                   _buildAdminCard(
                     context,
@@ -66,7 +80,12 @@ class AdminPage extends StatelessWidget {
                     title: 'Yorum\nYönetimi',
                     subtitle: 'Yorumları incele ve sil',
                     color: const Color(0xFF784212),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminReviewsPage())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AdminReviewsPage(),
+                      ),
+                    ),
                   ),
                   _buildAdminCard(
                     context,
@@ -74,7 +93,12 @@ class AdminPage extends StatelessWidget {
                     title: 'Mekan\nYönetimi',
                     subtitle: 'Mekanları düzenle ve sil',
                     color: const Color(0xFF145A32),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPlacesPage())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AdminPlacesPage(),
+                      ),
+                    ),
                   ),
                   _buildAdminCard(
                     context,
@@ -82,7 +106,23 @@ class AdminPage extends StatelessWidget {
                     title: 'İstatistikler',
                     subtitle: 'Uygulama verilerini gör',
                     color: const Color(0xFF6C3483),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminStatsPage())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AdminStatsPage()),
+                    ),
+                  ),
+                  _buildAdminCard(
+                    context,
+                    icon: Icons.add_location_alt_rounded,
+                    title: 'Mekan\nÖnerileri',
+                    subtitle: 'Kullanıcı önerilerini onayla',
+                    color: const Color(0xFFB03A2E),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SuggestionManagementPage(),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -112,7 +152,11 @@ class AdminPage extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: color.withValues(alpha: 0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Padding(
@@ -132,9 +176,20 @@ class AdminPage extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold, height: 1.3)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      height: 1.3,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  ),
                 ],
               ),
             ],
@@ -179,9 +234,14 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Kullanıcıyı Sil'),
-        content: Text('$userName adlı kullanıcıyı silmek istediğine emin misin?'),
+        content: Text(
+          '$userName adlı kullanıcıyı silmek istediğine emin misin?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('İptal'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text('Sil', style: TextStyle(color: Colors.red[900])),
@@ -193,9 +253,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     if (confirm == true) {
       final success = await _apiService.deleteUser(userId);
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kullanıcı silindi!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Kullanıcı silindi!')));
         _loadUsers();
       }
     }
@@ -208,54 +268,83 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       appBar: AppBar(
         backgroundColor: Colors.red[900],
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Kullanıcı Yönetimi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Kullanıcı Yönetimi',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _users.isEmpty
-              ? const Center(child: Text('Kayıtlı kullanıcı yok.'))
-              : ListView.builder(
+          ? const Center(child: Text('Kayıtlı kullanıcı yok.'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _users.length,
+              itemBuilder: (context, index) {
+                final user = _users[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(16),
-                  itemCount: _users.length,
-                  itemBuilder: (context, index) {
-                    final user = _users[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
                       ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: Colors.red[900],
-                            radius: 22,
-                            child: Text(
-                              (user['userName'] as String? ?? 'U')[0].toUpperCase(),
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.red[900],
+                        radius: 22,
+                        child: Text(
+                          (user['userName'] as String? ?? 'U')[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(user['userName'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                Text(user['email'] ?? '', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete_rounded, color: Colors.red[900]),
-                            onPressed: () => _deleteUser(user['id'] as int, user['userName'] as String),
-                          ),
-                        ],
+                        ),
                       ),
-                    );
-                  },
-                ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user['userName'] ?? '',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            Text(
+                              user['email'] ?? '',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.delete_rounded,
+                          color: Colors.red[900],
+                        ),
+                        onPressed: () => _deleteUser(
+                          user['id'] as int,
+                          user['userName'] as String,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
     );
   }
 }
@@ -296,7 +385,10 @@ class _AdminReviewsPageState extends State<AdminReviewsPage> {
         title: const Text('Yorumu Sil'),
         content: const Text('Bu yorumu silmek istediğine emin misin?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('İptal'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text('Sil', style: TextStyle(color: Colors.red[900])),
@@ -308,9 +400,9 @@ class _AdminReviewsPageState extends State<AdminReviewsPage> {
     if (confirm == true) {
       final success = await _apiService.deleteReview(placeId, reviewId);
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Yorum silindi!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Yorum silindi!')));
         _loadReviews();
       }
     }
@@ -323,71 +415,112 @@ class _AdminReviewsPageState extends State<AdminReviewsPage> {
       appBar: AppBar(
         backgroundColor: Colors.red[900],
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Yorum Yönetimi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Yorum Yönetimi',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _reviews.isEmpty
-              ? const Center(child: Text('Henüz yorum yok.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _reviews.length,
-                  itemBuilder: (context, index) {
-                    final review = _reviews[index];
-                    final rating = (review['rating'] as num?)?.toInt() ?? 0;
-                    final date = review['createdAt'] != null ? DateTime.tryParse(review['createdAt']) : null;
+          ? const Center(child: Text('Henüz yorum yok.'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _reviews.length,
+              itemBuilder: (context, index) {
+                final review = _reviews[index];
+                final rating = (review['rating'] as num?)?.toInt() ?? 0;
+                final date = review['createdAt'] != null
+                    ? DateTime.tryParse(review['createdAt'])
+                    : null;
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: const Color(0xFF784212),
-                                radius: 18,
-                                child: Text(
-                                  (review['userName'] as String? ?? 'U')[0].toUpperCase(),
-                                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                                ),
+                          CircleAvatar(
+                            backgroundColor: const Color(0xFF784212),
+                            radius: 18,
+                            child: Text(
+                              (review['userName'] as String? ?? 'U')[0]
+                                  .toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(review['userName'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    if (date != null)
-                                      Text('${date.day}.${date.month}.${date.year}', style: TextStyle(color: Colors.grey[400], fontSize: 11)),
-                                  ],
-                                ),
-                              ),
-                              Row(
-                                children: List.generate(5, (i) => Icon(
-                                  i < rating ? Icons.star_rounded : Icons.star_border_rounded,
-                                  color: Colors.amber, size: 14,
-                                )),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.delete_rounded, color: Colors.red[900], size: 20),
-                                onPressed: () => _deleteReview(review['placeId'] as int, review['id'] as int),
-                              ),
-                            ],
+                            ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(review['comment'] ?? '', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  review['userName'] ?? '',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (date != null)
+                                  Text(
+                                    '${date.day}.${date.month}.${date.year}',
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Row(
+                            children: List.generate(
+                              5,
+                              (i) => Icon(
+                                i < rating
+                                    ? Icons.star_rounded
+                                    : Icons.star_border_rounded,
+                                color: Colors.amber,
+                                size: 14,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.delete_rounded,
+                              color: Colors.red[900],
+                              size: 20,
+                            ),
+                            onPressed: () => _deleteReview(
+                              review['placeId'] as int,
+                              review['id'] as int,
+                            ),
+                          ),
                         ],
                       ),
-                    );
-                  },
-                ),
+                      const SizedBox(height: 8),
+                      Text(
+                        review['comment'] ?? '',
+                        style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
     );
   }
 }
@@ -428,7 +561,10 @@ class _AdminPlacesPageState extends State<AdminPlacesPage> {
         title: const Text('Mekanı Sil'),
         content: Text('"$placeName" mekanını silmek istediğine emin misin?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('İptal'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text('Sil', style: TextStyle(color: Colors.red[900])),
@@ -440,9 +576,9 @@ class _AdminPlacesPageState extends State<AdminPlacesPage> {
     if (confirm == true) {
       final success = await _apiService.deletePlace(placeId);
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mekan silindi!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Mekan silindi!')));
         _loadPlaces();
       }
     }
@@ -455,7 +591,10 @@ class _AdminPlacesPageState extends State<AdminPlacesPage> {
       appBar: AppBar(
         backgroundColor: Colors.red[900],
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Mekan Yönetimi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Mekan Yönetimi',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -469,7 +608,12 @@ class _AdminPlacesPageState extends State<AdminPlacesPage> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                      ),
+                    ],
                   ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(12),
@@ -488,8 +632,19 @@ class _AdminPlacesPageState extends State<AdminPlacesPage> {
                         ),
                       ),
                     ),
-                    title: Text(place.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: Text(place.description, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                    title: Text(
+                      place.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: Text(
+                      place.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     trailing: IconButton(
                       icon: Icon(Icons.delete_rounded, color: Colors.red[900]),
                       onPressed: () => _deletePlace(place.id, place.name),
@@ -538,7 +693,10 @@ class _AdminStatsPageState extends State<AdminStatsPage> {
       appBar: AppBar(
         backgroundColor: Colors.red[900],
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('İstatistikler', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'İstatistikler',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -549,17 +707,41 @@ class _AdminStatsPageState extends State<AdminStatsPage> {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Expanded(child: _buildStatCard('📍 Toplam Mekan', '${_stats['totalPlaces']}', const Color(0xFF145A32))),
+                      Expanded(
+                        child: _buildStatCard(
+                          '📍 Toplam Mekan',
+                          '${_stats['totalPlaces']}',
+                          const Color(0xFF145A32),
+                        ),
+                      ),
                       const SizedBox(width: 12),
-                      Expanded(child: _buildStatCard('👤 Toplam Kullanıcı', '${_stats['totalUsers']}', const Color(0xFF1A5276))),
+                      Expanded(
+                        child: _buildStatCard(
+                          '👤 Toplam Kullanıcı',
+                          '${_stats['totalUsers']}',
+                          const Color(0xFF1A5276),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(child: _buildStatCard('💬 Toplam Yorum', '${_stats['totalReviews']}', const Color(0xFF784212))),
+                      Expanded(
+                        child: _buildStatCard(
+                          '💬 Toplam Yorum',
+                          '${_stats['totalReviews']}',
+                          const Color(0xFF784212),
+                        ),
+                      ),
                       const SizedBox(width: 12),
-                      Expanded(child: _buildStatCard('🏆 En Popüler', '${_stats['mostReviewedPlace']}', const Color(0xFF6C3483))),
+                      Expanded(
+                        child: _buildStatCard(
+                          '🏆 En Popüler',
+                          '${_stats['mostReviewedPlace']}',
+                          const Color(0xFF6C3483),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -569,23 +751,50 @@ class _AdminStatsPageState extends State<AdminStatsPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 8,
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('En Çok Yorumlanan Mekan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        const Text(
+                          'En Çok Yorumlanan Mekan',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            Icon(Icons.emoji_events_rounded, color: Colors.amber[700], size: 32),
+                            Icon(
+                              Icons.emoji_events_rounded,
+                              color: Colors.amber[700],
+                              size: 32,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('${_stats['mostReviewedPlace']}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                                  Text('${_stats['mostReviewedCount']} yorum', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+                                  Text(
+                                    '${_stats['mostReviewedPlace']}',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${_stats['mostReviewedCount']} yorum',
+                                    style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -604,16 +813,38 @@ class _AdminStatsPageState extends State<AdminStatsPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.75)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(
+          colors: [color, color.withValues(alpha: 0.75)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(
+            title,
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
           const SizedBox(height: 8),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
