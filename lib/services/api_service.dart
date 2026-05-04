@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -111,27 +112,41 @@ class ApiService {
     int placeId,
     String userName,
     String comment,
-    int rating,
-  ) async {
+    int rating, {
+    File? imageFile,
+  }) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/Places/$placeId/reviews');
 
     try {
-      final response = await http.post(
-        url,
-        headers: await _getHeaders(withAuth: true),
-        body: jsonEncode({
-          "userName": userName,
-          "comment": comment,
-          "rating": rating,
-          "placeId": placeId,
-        }),
-      );
+      final request = http.MultipartRequest('POST', url);
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      request.fields['userName'] = userName;
+      request.fields['comment'] = comment;
+      request.fields['rating'] = rating.toString();
+
+      if (imageFile != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('imageFile', imageFile.path),
+        );
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception('Yorum gönderilemedi.');
+        throw Exception(
+          response.body.isNotEmpty ? response.body : 'Yorum gönderilemedi.',
+        );
       }
     } catch (e) {
-      throw Exception(e.toString());
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
@@ -194,6 +209,22 @@ class ApiService {
       }
     } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<bool> resetPassword(String email, String newPassword) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Auth/reset-password');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: await _getHeaders(),
+        body: jsonEncode({"email": email, "newPassword": newPassword}),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
     }
   }
 

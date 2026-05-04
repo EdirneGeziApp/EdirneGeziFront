@@ -16,13 +16,14 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ApiService _apiService = ApiService();
+
   List<Place> _allPlaces = [];
   List<Place> _filteredPlaces = [];
   List<Category> _categories = [];
   List<int> _favoriteIds = [];
+
   int _selectedCategoryId = 0;
   bool _isLoading = true;
-  bool _showOnlyFavorites = false;
   String _userName = '';
 
   String _weatherTemp = '--';
@@ -61,12 +62,15 @@ class _HomePageState extends State<HomePage> {
       final url = Uri.parse(
         'https://api.open-meteo.com/v1/forecast?latitude=41.6771&longitude=26.5557&current_weather=true&timezone=Europe%2FIstanbul',
       );
+
       final response = await http.get(url);
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final current = data['current_weather'];
         final temp = current['temperature'];
         final code = current['weathercode'] as int;
+
         setState(() {
           _weatherTemp = '${temp.round()}°C';
           _weatherDesc = _getWeatherDesc(code);
@@ -109,6 +113,7 @@ class _HomePageState extends State<HomePage> {
         _apiService.getPlaces(),
         _apiService.getCategories(),
       ]);
+
       setState(() {
         _allPlaces = results[0] as List<Place>;
         _filteredPlaces = _allPlaces;
@@ -126,7 +131,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _toggleFavorite(int placeId) async {
-    bool isFav = _favoriteIds.contains(placeId);
+    final isFav = _favoriteIds.contains(placeId);
 
     if (isFav) {
       await _apiService.removeFavorite(placeId);
@@ -140,13 +145,14 @@ class _HomePageState extends State<HomePage> {
   void _runFilter(String query) {
     setState(() {
       _filteredPlaces = _allPlaces.where((place) {
-        final nameMatch = place.name.toLowerCase().contains(
-          query.toLowerCase(),
-        );
+        final nameMatch =
+            place.name.toLowerCase().contains(query.toLowerCase());
+
         final categoryMatch =
-            _selectedCategoryId == 0 || place.categoryId == _selectedCategoryId;
-        final favMatch = !_showOnlyFavorites || _favoriteIds.contains(place.id);
-        return nameMatch && categoryMatch && favMatch;
+            _selectedCategoryId == 0 ||
+            place.categoryId == _selectedCategoryId;
+
+        return nameMatch && categoryMatch;
       }).toList();
     });
   }
@@ -156,18 +162,12 @@ class _HomePageState extends State<HomePage> {
     _runFilter(_searchController.text);
   }
 
-  void _toggleFavoritesFilter() {
-    setState(() => _showOnlyFavorites = !_showOnlyFavorites);
-    _runFilter(_searchController.text);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: Column(
         children: [
-          // ÜST KISIM - Sabit kalır, kaydırılmaz
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -190,7 +190,6 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Karşılama + Hava Durumu
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -254,8 +253,6 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                     const SizedBox(height: 14),
-
-                    // ARAMA KUTUSU - Sabit kalır
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
@@ -291,7 +288,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // KATEGORİLER - Sabit kalır
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -301,98 +297,94 @@ class _HomePageState extends State<HomePage> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
-                  _buildFavChip(),
-                  const SizedBox(width: 6),
                   _buildCategoryChip('Tümü', 0, Icons.apps_rounded),
-                  ...(_categories.map(
+                  ..._categories.map(
                     (cat) => _buildCategoryChip(
                       cat.name,
                       cat.id,
                       _categoryIcons[cat.id] ?? Icons.place_rounded,
                     ),
-                  )),
+                  ),
                 ],
               ),
             ),
           ),
 
-          // MEKAN LİSTESİ - Sadece bu kısım kaydırılır
           Expanded(
             child: RefreshIndicator(
               color: Colors.red[900],
               onRefresh: () async {
                 await _loadInitialData();
+                await _loadFavorites();
                 await _fetchWeather();
               },
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredPlaces.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.search_off_rounded,
-                            size: 60,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _showOnlyFavorites
-                                ? 'Henüz favori eklemediniz.'
-                                : 'Sonuç bulunamadı.',
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-                      itemCount: _filteredPlaces.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == 0) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _showOnlyFavorites
-                                      ? '❤️ Favorilerim'
-                                      : '📍 Tüm Mekanlar',
-                                  style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off_rounded,
+                                size: 60,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Sonuç bulunamadı.',
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: 16,
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red[50],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '${_filteredPlaces.length} mekan',
-                                    style: TextStyle(
-                                      color: Colors.red[900],
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+                          itemCount: _filteredPlaces.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index == 0) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      '📍 Tüm Mekanlar',
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red[50],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        '${_filteredPlaces.length} mekan',
+                                        style: TextStyle(
+                                          color: Colors.red[900],
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          );
-                        }
-                        return _buildPlaceCard(_filteredPlaces[index - 1]);
-                      },
-                    ),
+                              );
+                            }
+
+                            return _buildPlaceCard(_filteredPlaces[index - 1]);
+                          },
+                        ),
             ),
           ),
         ],
@@ -400,44 +392,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildFavChip() {
-    return GestureDetector(
-      onTap: _toggleFavoritesFilter,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: _showOnlyFavorites ? Colors.red[900] : Colors.grey[100],
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: _showOnlyFavorites ? Colors.red[900]! : Colors.grey[300]!,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.favorite_rounded,
-              size: 16,
-              color: _showOnlyFavorites ? Colors.white : Colors.red[900],
-            ),
-            const SizedBox(width: 5),
-            Text(
-              'Favoriler',
-              style: TextStyle(
-                color: _showOnlyFavorites ? Colors.white : Colors.black87,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildCategoryChip(String label, int id, IconData icon) {
-    bool isSelected = _selectedCategoryId == id;
+    final bool isSelected = _selectedCategoryId == id;
+
     return GestureDetector(
       onTap: () => _filterByCategory(id),
       child: AnimatedContainer(
@@ -474,7 +431,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildPlaceCard(Place place) {
-    bool isFav = _favoriteIds.contains(place.id);
+    final bool isFav = _favoriteIds.contains(place.id);
+
     return GestureDetector(
       onTap: () async {
         await Navigator.push(
@@ -483,6 +441,7 @@ class _HomePageState extends State<HomePage> {
             builder: (context) => PlaceDetailPage(place: place),
           ),
         );
+
         _loadFavorites();
       },
       child: Container(
@@ -512,7 +471,7 @@ class _HomePageState extends State<HomePage> {
                     height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (c, e, s) => Container(
+                    errorBuilder: (context, error, stackTrace) => Container(
                       height: 200,
                       color: Colors.grey[200],
                       child: Icon(

@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import 'main_page.dart';
 import 'register_page.dart';
 import 'admin_page.dart';
+import 'forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -27,13 +28,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _loadSavedEmail() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedEmail = prefs.getString('userEmail') ?? '';
-
-    if (!mounted) return;
-
-    setState(() {
-      _emailController.text = savedEmail;
-    });
+    _emailController.text = prefs.getString('userEmail') ?? '';
   }
 
   Future<void> _login() async {
@@ -52,211 +47,257 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final result = await ApiService().login(email, password);
 
-      if (result == null) {
+      if (result == null || result['token'] == null) {
         throw Exception("Giriş başarısız.");
-      }
-
-      if (result['token'] == null) {
-        throw Exception("Token alınamadı. Backend login cevabını kontrol edin.");
       }
 
       final prefs = await SharedPreferences.getInstance();
 
       await prefs.setString('token', result['token']);
-      await prefs.setInt('userId', result['userId']);
       await prefs.setString('userName', result['userName']);
-      await prefs.setString('userEmail', email);
-      await prefs.setString('role', result['role'] ?? 'User');
-      await prefs.setBool('isLoggedIn', true);
       await prefs.setBool('isAdmin', result['isAdmin'] ?? false);
 
       if (!mounted) return;
 
-      if (result['isAdmin'] == true) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminPage()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainPage()),
-        );
-      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              result['isAdmin'] ? const AdminPage() : const MainPage(),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-        ),
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
+  void _forgotPassword() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Şifre sıfırlama yakında eklenecek")),
+    );
+  }
+
+  InputDecoration _inputDecoration(
+    String label,
+    IconData icon, {
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: Colors.grey[100],
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.red[900]!, width: 2),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40),
+      body: Container(
+        color: Colors.white,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [0.0, 0.45, 0.78, 1.0],
+              colors: [
+                Colors.red[900]!,
+                Colors.red[700]!,
+                Colors.white,
+                Colors.white,
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  const SizedBox(height: 40),
 
-              Center(
-                child: Image.network(
-                  'https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Selimiye_Mosque_in_Edirne.jpg/400px-Selimiye_Mosque_in_Edirne.jpg',
-                  height: 160,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
-                    Icons.location_city,
-                    size: 100,
-                    color: Colors.red[900],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              Text(
-                "Hoş Geldiniz!",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red[900],
-                ),
-              ),
-
-              const SizedBox(height: 6),
-
-              const Text(
-                "Edirne'yi keşfetmeye devam etmek için giriş yapın.",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  labelText: "Email",
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Colors.red[900]!,
-                      width: 2,
+                  Container(
+                    height: 110,
+                    width: 110,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Icon(
+                      Icons.location_city_rounded,
+                      size: 60,
+                      color: Colors.red[900],
                     ),
                   ),
-                ),
-              ),
 
-              const SizedBox(height: 16),
+                  const SizedBox(height: 30),
 
-              TextField(
-                controller: _passwordController,
-                obscureText: _obscurePassword,
-                decoration: InputDecoration(
-                  labelText: "Şifre",
-                  prefixIcon: const Icon(Icons.lock_outlined),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
+                  Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                        ),
+                      ],
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Colors.red[900]!,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red[900],
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: _isLoading ? null : _login,
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          "Giriş Yap",
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Hoş Geldiniz 👋",
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 26,
                             fontWeight: FontWeight.bold,
+                            color: Colors.red[900],
                           ),
                         ),
-                ),
-              ),
 
-              const SizedBox(height: 20),
+                        const SizedBox(height: 6),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Hesabın yok mu? "),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RegisterPage(),
+                        const Text(
+                          "Devam etmek için giriş yapın",
+                          style: TextStyle(color: Colors.grey),
                         ),
-                      );
-                    },
-                    child: Text(
-                      "Hesap Oluştur",
-                      style: TextStyle(
-                        color: Colors.red[900],
-                        fontWeight: FontWeight.bold,
-                      ),
+
+                        const SizedBox(height: 24),
+
+                        TextField(
+                          controller: _emailController,
+                          decoration: _inputDecoration(
+                            "Email",
+                            Icons.email_outlined,
+                          ),
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          decoration: _inputDecoration(
+                            "Şifre",
+                            Icons.lock_outline,
+                            suffix: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 2),
+
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordPage(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              "Şifreni mi unuttun?",
+                              style: TextStyle(
+                                color: Colors.red[900],
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red[900],
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            onPressed: _isLoading ? null : _login,
+                            child: _isLoading
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
+                                : const Text(
+                                    "Giriş Yap",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text("Hesabın yok mu? "),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const RegisterPage(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  "Kayıt Ol",
+                                  style: TextStyle(
+                                    color: Colors.red[900],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),

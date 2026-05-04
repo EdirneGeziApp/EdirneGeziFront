@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
-import 'home_page.dart';
 
-class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+class ForgotPasswordPage extends StatefulWidget {
+  const ForgotPasswordPage({super.key});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
-  final _userNameController = TextEditingController();
+class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _passwordConfirmController = TextEditingController();
 
-  bool _isLoading = false;
-  bool _obscurePassword = true;
-  bool _obscurePasswordConfirm = true;
+  bool _loading = false;
+  bool _obscure = true;
 
   int _passwordScore = 0;
   String _passwordStrengthText = "Şifre gücü";
@@ -62,28 +57,12 @@ class _RegisterPageState extends State<RegisterPage> {
     return RegExp(r'^[\w\.-]+@[\w\.-]+\.\w+$').hasMatch(email);
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  Future<void> _register() async {
-    final userName = _userNameController.text.trim();
+  Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-    final confirmPassword = _passwordConfirmController.text.trim();
 
-    if (userName.isEmpty ||
-        email.isEmpty ||
-        password.isEmpty ||
-        confirmPassword.isEmpty) {
+    if (email.isEmpty || password.isEmpty) {
       _showMessage("Lütfen tüm alanları doldurun.");
-      return;
-    }
-
-    if (userName.length < 3) {
-      _showMessage("Kullanıcı adı en az 3 karakter olmalı.");
       return;
     }
 
@@ -102,36 +81,28 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    if (password != confirmPassword) {
-      _showMessage("Şifreler eşleşmiyor.");
-      return;
+    setState(() => _loading = true);
+
+    final success = await ApiService().resetPassword(email, password);
+
+    if (!mounted) return;
+
+    setState(() => _loading = false);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Şifre başarıyla güncellendi.")),
+      );
+      Navigator.pop(context);
+    } else {
+      _showMessage("Şifre güncellenemedi. Email adresini kontrol edin.");
     }
+  }
 
-    setState(() => _isLoading = true);
-
-    try {
-      final result = await ApiService().register(userName, email, password);
-
-      if (result != null && mounted) {
-        final prefs = await SharedPreferences.getInstance();
-
-        await prefs.setInt('userId', result['userId']);
-        await prefs.setString('userName', result['userName']);
-        await prefs.setBool('isLoggedIn', true);
-
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        _showMessage(e.toString().replaceAll('Exception: ', ''));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   InputDecoration _inputDecoration(
@@ -157,7 +128,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _buildPasswordStrength() {
-    final double value = (_passwordScore / 5).clamp(0.0, 1.0);
+    double value = (_passwordScore / 5).clamp(0.0, 1.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,10 +155,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   void dispose() {
-    _userNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _passwordConfirmController.dispose();
     super.dispose();
   }
 
@@ -201,7 +170,7 @@ class _RegisterPageState extends State<RegisterPage> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              stops: const [0.0, 0.42, 0.78, 1.0],
+              stops: const [0.0, 0.45, 0.78, 1.0],
               colors: [
                 Colors.red[900]!,
                 Colors.red[700]!,
@@ -215,17 +184,7 @@ class _RegisterPageState extends State<RegisterPage> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                        color: Colors.white,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 40),
 
                   Container(
                     height: 100,
@@ -235,13 +194,13 @@ class _RegisterPageState extends State<RegisterPage> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                     child: Icon(
-                      Icons.person_add_alt_1_rounded,
+                      Icons.lock_reset_rounded,
                       size: 55,
                       color: Colors.red[900],
                     ),
                   ),
 
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 30),
 
                   Container(
                     padding: const EdgeInsets.all(22),
@@ -259,9 +218,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Hesap Oluştur ✨",
+                          "Şifre Sıfırla 🔐",
                           style: TextStyle(
-                            fontSize: 25,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Colors.red[900],
                           ),
@@ -270,21 +229,11 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 6),
 
                         const Text(
-                          "Bilgilerini girerek Edirne Gezi Rehberi'ne katıl.",
+                          "Email adresinizi ve yeni şifrenizi girin.",
                           style: TextStyle(color: Colors.grey),
                         ),
 
-                        const SizedBox(height: 22),
-
-                        TextField(
-                          controller: _userNameController,
-                          decoration: _inputDecoration(
-                            "Kullanıcı Adı",
-                            Icons.person_outlined,
-                          ),
-                        ),
-
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 24),
 
                         TextField(
                           controller: _emailController,
@@ -299,20 +248,20 @@ class _RegisterPageState extends State<RegisterPage> {
 
                         TextField(
                           controller: _passwordController,
-                          obscureText: _obscurePassword,
+                          obscureText: _obscure,
                           onChanged: _checkPasswordStrength,
                           decoration: _inputDecoration(
-                            "Şifre",
+                            "Yeni Şifre",
                             Icons.lock_outline,
                             suffix: IconButton(
                               icon: Icon(
-                                _obscurePassword
+                                _obscure
                                     ? Icons.visibility_off
                                     : Icons.visibility,
                               ),
                               onPressed: () {
                                 setState(() {
-                                  _obscurePassword = !_obscurePassword;
+                                  _obscure = !_obscure;
                                 });
                               },
                             ),
@@ -323,31 +272,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                         _buildPasswordStrength(),
 
-                        const SizedBox(height: 14),
-
-                        TextField(
-                          controller: _passwordConfirmController,
-                          obscureText: _obscurePasswordConfirm,
-                          decoration: _inputDecoration(
-                            "Şifre Tekrar",
-                            Icons.lock_outline,
-                            suffix: IconButton(
-                              icon: Icon(
-                                _obscurePasswordConfirm
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePasswordConfirm =
-                                      !_obscurePasswordConfirm;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 20),
 
                         SizedBox(
                           width: double.infinity,
@@ -360,19 +285,34 @@ class _RegisterPageState extends State<RegisterPage> {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            onPressed: _isLoading ? null : _register,
-                            child: _isLoading
+                            onPressed: _loading ? null : _resetPassword,
+                            child: _loading
                                 ? const CircularProgressIndicator(
                                     color: Colors.white,
                                   )
                                 : const Text(
-                                    "Hesap Oluştur",
+                                    "Şifreyi Güncelle",
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Center(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(
+                              "Giriş ekranına dön",
+                              style: TextStyle(
+                                color: Colors.red[900],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
                       ],
