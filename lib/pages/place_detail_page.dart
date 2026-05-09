@@ -105,7 +105,7 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
       }
     } catch (e) {
       if (mounted) {
-        _showMessage('Yorum gönderilemedi, tekrar deneyin.');
+        _showMessage(e.toString().replaceAll('Exception: ', ''));
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
