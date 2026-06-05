@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import '../models/place.dart';
 import 'login_page.dart';
 import 'suggestion_management_page.dart';
+import 'route_suggestion_management_page.dart';
 
 class AdminPage extends StatelessWidget {
   const AdminPage({super.key});
@@ -121,6 +122,19 @@ class AdminPage extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const SuggestionManagementPage(),
+                      ),
+                    ),
+                  ),
+                  _buildAdminCard(
+                    context,
+                    icon: Icons.alt_route_rounded,
+                    title: 'Rota\nÖnerileri',
+                    subtitle: 'Kullanıcı rotalarını onayla',
+                    color: const Color(0xFF922B21),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const RouteSuggestionManagementPage(),
                       ),
                     ),
                   ),

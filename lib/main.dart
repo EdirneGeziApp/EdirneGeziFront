@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'pages/main_page.dart';
 import 'pages/login_page.dart';
 import 'pages/admin_page.dart';
+import 'pages/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,9 +43,10 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.grey[100],
       ),
-      home: isLoggedIn
-          ? (isAdmin ? const AdminPage() : const MainPage())
-          : const LoginPage(),
+      home: SplashScreen(
+        isLoggedIn: isLoggedIn,
+        isAdmin: isAdmin,
+      ),
     );
   }
 }

@@ -228,7 +228,6 @@ class ApiService {
     }
   }
 
-  // Admin: Tüm kullanıcıları getir
   Future<List<Map<String, dynamic>>> getUsers() async {
     final url = Uri.parse('${ApiConstants.baseUrl}/Auth/users');
 
@@ -249,7 +248,6 @@ class ApiService {
     }
   }
 
-  // Admin: Kullanıcı sil
   Future<bool> deleteUser(int userId) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/Auth/users/$userId');
 
@@ -265,7 +263,6 @@ class ApiService {
     }
   }
 
-  // Admin: Tüm yorumları getir
   Future<List<Map<String, dynamic>>> getAllReviews() async {
     final url = Uri.parse('${ApiConstants.baseUrl}/Places/allreviews');
 
@@ -286,7 +283,6 @@ class ApiService {
     }
   }
 
-  // Admin: Yorum sil
   Future<bool> deleteReview(int placeId, int reviewId) async {
     final url = Uri.parse(
       '${ApiConstants.baseUrl}/Places/$placeId/reviews/$reviewId',
@@ -304,7 +300,6 @@ class ApiService {
     }
   }
 
-  // Admin: Mekan sil
   Future<bool> deletePlace(int placeId) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/Places/$placeId');
 
@@ -320,7 +315,6 @@ class ApiService {
     }
   }
 
-  // Admin: İstatistikler
   Future<Map<String, dynamic>> getStats() async {
     try {
       final results = await Future.wait([
@@ -417,6 +411,23 @@ class ApiService {
 
           return place;
         }).toList();
+      }
+
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getTopFavoritePlaces() async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Favorites/top');
+
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((e) => e as Map<String, dynamic>).toList();
       }
 
       return [];
@@ -538,6 +549,174 @@ class ApiService {
       return response.statusCode == 200;
     } catch (e) {
       return false;
+    }
+  }
+
+  Future<bool> editPlaceSuggestion(
+    int id,
+    Map<String, dynamic> updatedData,
+  ) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/PlaceSuggestions/$id/edit');
+
+    try {
+      final response = await http.put(
+        url,
+        headers: await _getHeaders(withAuth: true),
+        body: jsonEncode(updatedData),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ROTA ÖNERİLERİ
+
+  Future<bool> createRouteSuggestion({
+    required String title,
+    required String description,
+    required String places,
+    required String duration,
+    required String distance,
+  }) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/RouteSuggestions');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: await _getHeaders(withAuth: true),
+        body: jsonEncode({
+          "title": title,
+          "description": description,
+          "places": places,
+          "duration": duration,
+          "distance": distance,
+        }),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getRouteSuggestions() async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/RouteSuggestions');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: await _getHeaders(withAuth: true),
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      }
+
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> approveRouteSuggestion(int id) async {
+    final url = Uri.parse(
+      '${ApiConstants.baseUrl}/RouteSuggestions/$id/approve',
+    );
+
+    try {
+      final response = await http.put(
+        url,
+        headers: await _getHeaders(withAuth: true),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> rejectRouteSuggestion(int id) async {
+    final url = Uri.parse(
+      '${ApiConstants.baseUrl}/RouteSuggestions/$id/reject',
+    );
+
+    try {
+      final response = await http.put(
+        url,
+        headers: await _getHeaders(withAuth: true),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> editRouteSuggestion({
+    required int id,
+    required String title,
+    required String description,
+    required String places,
+    required String duration,
+    required String distance,
+  }) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/RouteSuggestions/$id/edit');
+
+    try {
+      final response = await http.put(
+        url,
+        headers: await _getHeaders(withAuth: true),
+        body: jsonEncode({
+          "title": title,
+          "description": description,
+          "places": places,
+          "duration": duration,
+          "distance": distance,
+        }),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getApprovedRouteSuggestions() async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/RouteSuggestions/approved');
+
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((e) => e as Map<String, dynamic>).toList();
+      }
+
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> getTodayRecommendation() async {
+    final url = Uri.parse('${ApiConstants.baseUrl}/Recommendations/today');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: await _getHeaders(withAuth: true),
+      );
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        return json.decode(response.body);
+      }
+
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 }

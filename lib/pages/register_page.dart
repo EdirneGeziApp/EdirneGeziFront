@@ -22,6 +22,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   int _passwordScore = 0;
   String _passwordStrengthText = "Şifre gücü";
+  String _passwordHintText = "Daha güvenli bir şifre için harf, sayı ve özel karakter kullan.";
   Color _passwordStrengthColor = Colors.grey;
 
   void _checkPasswordStrength(String password) {
@@ -34,26 +35,40 @@ class _RegisterPageState extends State<RegisterPage> {
     if (RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(password)) score++;
 
     String text;
+    String hint;
     Color color;
 
     if (password.isEmpty) {
       text = "Şifre gücü";
+      hint = "Daha güvenli bir şifre için harf, sayı ve özel karakter kullan.";
       color = Colors.grey;
       score = 0;
-    } else if (score <= 2) {
+    } else if (password.length < 6) {
       text = "Zayıf şifre";
+      hint = "En az 6 karakter kullanmalısın.";
       color = Colors.red;
-    } else if (score <= 4) {
+    } else if (!RegExp(r'[A-Z]').hasMatch(password)) {
       text = "Orta seviye şifre";
+      hint = "Bir büyük harf eklersen daha güçlü olur.";
+      color = Colors.orange;
+    } else if (!RegExp(r'[0-9]').hasMatch(password)) {
+      text = "Orta seviye şifre";
+      hint = "Bir sayı eklersen daha güvenli olur.";
+      color = Colors.orange;
+    } else if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(password)) {
+      text = "Orta seviye şifre";
+      hint = "Özel karakter eklersen şifren daha güçlü olur.";
       color = Colors.orange;
     } else {
       text = "Güçlü şifre";
+      hint = "Harika! Bu şifre güçlü görünüyor.";
       color = Colors.green;
     }
 
     setState(() {
       _passwordScore = score;
       _passwordStrengthText = text;
+      _passwordHintText = hint;
       _passwordStrengthColor = color;
     });
   }
@@ -169,14 +184,41 @@ class _RegisterPageState extends State<RegisterPage> {
           color: _passwordStrengthColor,
           borderRadius: BorderRadius.circular(10),
         ),
-        const SizedBox(height: 6),
-        Text(
-          _passwordStrengthText,
-          style: TextStyle(
-            color: _passwordStrengthColor,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+        const SizedBox(height: 7),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              size: 15,
+              color: _passwordStrengthColor,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: "$_passwordStrengthText: ",
+                      style: TextStyle(
+                        color: _passwordStrengthColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextSpan(
+                      text: _passwordHintText,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -224,9 +266,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 10),
-
                   Container(
                     height: 100,
                     width: 100,
@@ -240,9 +280,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       color: Colors.red[900],
                     ),
                   ),
-
                   const SizedBox(height: 26),
-
                   Container(
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
@@ -266,16 +304,12 @@ class _RegisterPageState extends State<RegisterPage> {
                             color: Colors.red[900],
                           ),
                         ),
-
                         const SizedBox(height: 6),
-
                         const Text(
                           "Bilgilerini girerek Edirne Gezi Rehberi'ne katıl.",
                           style: TextStyle(color: Colors.grey),
                         ),
-
                         const SizedBox(height: 22),
-
                         TextField(
                           controller: _userNameController,
                           decoration: _inputDecoration(
@@ -283,9 +317,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             Icons.person_outlined,
                           ),
                         ),
-
                         const SizedBox(height: 14),
-
                         TextField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
@@ -294,9 +326,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             Icons.email_outlined,
                           ),
                         ),
-
                         const SizedBox(height: 14),
-
                         TextField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
@@ -318,13 +348,9 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 10),
-
                         _buildPasswordStrength(),
-
                         const SizedBox(height: 14),
-
                         TextField(
                           controller: _passwordConfirmController,
                           obscureText: _obscurePasswordConfirm,
@@ -346,9 +372,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 22),
-
                         SizedBox(
                           width: double.infinity,
                           height: 50,

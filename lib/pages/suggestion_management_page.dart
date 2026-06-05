@@ -5,7 +5,8 @@ class SuggestionManagementPage extends StatefulWidget {
   const SuggestionManagementPage({super.key});
 
   @override
-  State<SuggestionManagementPage> createState() => _SuggestionManagementPageState();
+  State<SuggestionManagementPage> createState() =>
+      _SuggestionManagementPageState();
 }
 
 class _SuggestionManagementPageState extends State<SuggestionManagementPage> {
@@ -55,6 +56,84 @@ class _SuggestionManagementPageState extends State<SuggestionManagementPage> {
       );
       await _loadSuggestions();
     }
+  }
+
+  Future<void> _showEditDialog(Map<String, dynamic> item) async {
+    final nameController = TextEditingController(text: item['name'] ?? '');
+    final descriptionController =
+        TextEditingController(text: item['description'] ?? '');
+    final imageUrlController =
+        TextEditingController(text: item['imageUrl'] ?? '');
+    final categoryIdController =
+        TextEditingController(text: item['categoryId'].toString());
+    final latitudeController =
+        TextEditingController(text: item['latitude'].toString());
+    final longitudeController =
+        TextEditingController(text: item['longitude'].toString());
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Mekan Önerisini Düzenle'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Mekan Adı')),
+                TextField(controller: descriptionController, decoration: const InputDecoration(labelText: 'Açıklama')),
+                TextField(controller: imageUrlController, decoration: const InputDecoration(labelText: 'Görsel URL')),
+                TextField(controller: categoryIdController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Kategori ID')),
+                TextField(controller: latitudeController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Latitude')),
+                TextField(controller: longitudeController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Longitude')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final updatedData = {
+                  'id': item['id'],
+                  'userId': item['userId'],
+                  'name': nameController.text.trim(),
+                  'description': descriptionController.text.trim(),
+                  'imageUrl': imageUrlController.text.trim(),
+                  'categoryId': int.tryParse(categoryIdController.text) ?? 1,
+                  'latitude': double.tryParse(latitudeController.text) ?? 0,
+                  'longitude': double.tryParse(longitudeController.text) ?? 0,
+                  'status': item['status'],
+                  'createdAt': item['createdAt'],
+                };
+
+                final success = await _apiService.editPlaceSuggestion(
+                  item['id'],
+                  updatedData,
+                );
+
+                if (!mounted) return;
+
+                Navigator.pop(context);
+
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Öneri güncellendi.')),
+                  );
+                  await _loadSuggestions();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Güncelleme başarısız.')),
+                  );
+                }
+              },
+              child: const Text('Kaydet'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Color _statusColor(String status) {
@@ -130,7 +209,10 @@ class _SuggestionManagementPageState extends State<SuggestionManagementPage> {
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: _statusColor(status).withOpacity(0.12),
                                     borderRadius: BorderRadius.circular(12),
@@ -149,39 +231,62 @@ class _SuggestionManagementPageState extends State<SuggestionManagementPage> {
                             const SizedBox(height: 8),
                             Text(
                               item['description'] ?? '',
-                              style: TextStyle(color: Colors.grey[700], height: 1.4),
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                height: 1.4,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               'Konum: ${item['latitude']} , ${item['longitude']}',
-                              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 13,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             if (status == 'Pending')
-                              Row(
+                              Column(
                                 children: [
-                                  Expanded(
+                                  SizedBox(
+                                    width: double.infinity,
                                     child: ElevatedButton.icon(
-                                      onPressed: () => _approve(id),
-                                      icon: const Icon(Icons.check_rounded),
-                                      label: const Text('Onayla'),
+                                      onPressed: () => _showEditDialog(item),
+                                      icon: const Icon(Icons.edit_rounded),
+                                      label: const Text('Düzenle'),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
+                                        backgroundColor: Colors.blueGrey,
                                         foregroundColor: Colors.white,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () => _reject(id),
-                                      icon: const Icon(Icons.close_rounded),
-                                      label: const Text('Reddet'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red[900],
-                                        foregroundColor: Colors.white,
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed: () => _approve(id),
+                                          icon: const Icon(Icons.check_rounded),
+                                          label: const Text('Onayla'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.green,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed: () => _reject(id),
+                                          icon: const Icon(Icons.close_rounded),
+                                          label: const Text('Reddet'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red[900],
+                                            foregroundColor: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

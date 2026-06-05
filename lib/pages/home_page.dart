@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/place.dart';
 import '../models/category.dart';
 import '../services/api_service.dart';
@@ -16,6 +18,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ApiService _apiService = ApiService();
+  final TextEditingController _searchController = TextEditingController();
 
   List<Place> _allPlaces = [];
   List<Place> _filteredPlaces = [];
@@ -24,13 +27,14 @@ class _HomePageState extends State<HomePage> {
 
   int _selectedCategoryId = 0;
   bool _isLoading = true;
+  bool _isNearbyMode = false;
+
   String _userName = '';
+  String _activeSearchLabel = '';
 
   String _weatherTemp = '--';
   String _weatherDesc = 'Yükleniyor...';
   IconData _weatherIcon = Icons.wb_sunny_rounded;
-
-  final TextEditingController _searchController = TextEditingController();
 
   final Map<int, IconData> _categoryIcons = {
     0: Icons.apps_rounded,
@@ -43,6 +47,16 @@ class _HomePageState extends State<HomePage> {
     7: Icons.celebration_rounded,
   };
 
+  final List<String> _quickSearches = [
+    'Yakınımdaki kafeler',
+    'Tarihi yerler',
+    'Yöresel lezzetler',
+    'Parklar',
+    'Müzeler',
+    'Ciğer',
+    'Köfte',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -52,8 +66,15 @@ class _HomePageState extends State<HomePage> {
     _fetchWeather();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadUserName() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() => _userName = prefs.getString('userName') ?? 'Gezgin');
   }
 
@@ -71,6 +92,8 @@ class _HomePageState extends State<HomePage> {
         final temp = current['temperature'];
         final code = current['weathercode'] as int;
 
+        if (!mounted) return;
+
         setState(() {
           _weatherTemp = '${temp.round()}°C';
           _weatherDesc = _getWeatherDesc(code);
@@ -78,6 +101,7 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _weatherDesc = 'Alınamadı';
         _weatherIcon = Icons.cloud_off_rounded;
@@ -114,6 +138,8 @@ class _HomePageState extends State<HomePage> {
         _apiService.getCategories(),
       ]);
 
+      if (!mounted) return;
+
       setState(() {
         _allPlaces = results[0] as List<Place>;
         _filteredPlaces = _allPlaces;
@@ -121,12 +147,14 @@ class _HomePageState extends State<HomePage> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _loadFavorites() async {
     final ids = await _apiService.getFavoriteIds();
+    if (!mounted) return;
     setState(() => _favoriteIds = ids);
   }
 
@@ -142,17 +170,83 @@ class _HomePageState extends State<HomePage> {
     await _loadFavorites();
   }
 
+  String _categoryName(int categoryId) {
+    try {
+      return _categories.firstWhere((c) => c.id == categoryId).name;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _normalize(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll('ı', 'i')
+        .replaceAll('ğ', 'g')
+        .replaceAll('ü', 'u')
+        .replaceAll('ş', 's')
+        .replaceAll('ö', 'o')
+        .replaceAll('ç', 'c');
+  }
+
+  bool _matchesSmartKeyword(Place place, String query) {
+    final q = _normalize(query);
+    final category = _normalize(_categoryName(place.categoryId));
+    final name = _normalize(place.name);
+    final desc = _normalize(place.description);
+
+    final searchText = '$name $desc $category';
+
+    if (searchText.contains(q)) return true;
+
+    final Map<String, List<String>> smartWords = {
+      'kafe': ['kafe', 'cafe', 'kahve', 'tatli', 'lezzet', 'restaurant'],
+      'cafe': ['kafe', 'cafe', 'kahve', 'tatli', 'lezzet', 'restaurant'],
+      'camii': ['camii', 'cami', 'selimiye', 'tarihi eser'],
+      'cami': ['camii', 'cami', 'selimiye', 'tarihi eser'],
+      'muze': ['muze', 'müze'],
+      'park': ['park', 'doga', 'doğa', 'bahce'],
+      'doga': ['doga', 'doğa', 'park'],
+      'ciğer': ['ciger', 'ciğer', 'lezzet', 'restaurant'],
+      'ciger': ['ciger', 'ciğer', 'lezzet', 'restaurant'],
+      'kofte': ['kofte', 'köfte', 'lezzet', 'restaurant'],
+      'köfte': ['kofte', 'köfte', 'lezzet', 'restaurant'],
+      'tatli': ['tatli', 'tatlı', 'lezzet', 'kafe'],
+      'tatlı': ['tatli', 'tatlı', 'lezzet', 'kafe'],
+      'tarihi': ['tarihi', 'tarihi eser', 'camii'],
+      'lezzet': ['lezzet', 'restaurant', 'kafe', 'ciğer', 'köfte'],
+    };
+
+    for (final entry in smartWords.entries) {
+      if (q.contains(_normalize(entry.key))) {
+        return entry.value.any((word) => searchText.contains(_normalize(word)));
+      }
+    }
+
+    return false;
+  }
+
   void _runFilter(String query) {
+    final cleanQuery = query.trim();
+
+    if (_normalize(cleanQuery).contains('yakinim') ||
+        _normalize(cleanQuery).contains('yakindaki')) {
+      _searchNearby(cleanQuery);
+      return;
+    }
+
     setState(() {
+      _isNearbyMode = false;
+      _activeSearchLabel = cleanQuery.isEmpty ? '' : cleanQuery;
+
       _filteredPlaces = _allPlaces.where((place) {
-        final nameMatch =
-            place.name.toLowerCase().contains(query.toLowerCase());
-
         final categoryMatch =
-            _selectedCategoryId == 0 ||
-            place.categoryId == _selectedCategoryId;
+            _selectedCategoryId == 0 || place.categoryId == _selectedCategoryId;
 
-        return nameMatch && categoryMatch;
+        final queryMatch =
+            cleanQuery.isEmpty || _matchesSmartKeyword(place, cleanQuery);
+
+        return categoryMatch && queryMatch;
       }).toList();
     });
   }
@@ -160,6 +254,108 @@ class _HomePageState extends State<HomePage> {
   void _filterByCategory(int categoryId) {
     setState(() => _selectedCategoryId = categoryId);
     _runFilter(_searchController.text);
+  }
+
+  Future<Position?> _getCurrentPosition() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+    if (!serviceEnabled) {
+      _showMessage('Konum servisi kapalı. Lütfen konumu aç.');
+      return null;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      _showMessage('Yakındaki mekanlar için konum izni gerekli.');
+      return null;
+    }
+
+    return Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+  }
+
+  Future<void> _searchNearby(String query) async {
+    setState(() {
+      _isLoading = true;
+      _isNearbyMode = true;
+      _activeSearchLabel = query;
+    });
+
+    final position = await _getCurrentPosition();
+
+    if (position == null) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final nearbyPlaces = await _apiService.getNearbyPlaces(
+      position.latitude,
+      position.longitude,
+      radiusKm: 5,
+    );
+
+    final cleanQuery = _normalize(query)
+        .replaceAll('yakinimdaki', '')
+        .replaceAll('yakinimda', '')
+        .replaceAll('yakinim', '')
+        .replaceAll('yakindaki', '')
+        .replaceAll('yakinda', '')
+        .trim();
+
+    final filtered = nearbyPlaces.where((place) {
+      final categoryMatch =
+          _selectedCategoryId == 0 || place.categoryId == _selectedCategoryId;
+
+      final queryMatch =
+          cleanQuery.isEmpty || _matchesSmartKeyword(place, cleanQuery);
+
+      return categoryMatch && queryMatch;
+    }).toList();
+
+    if (!mounted) return;
+
+    setState(() {
+      _filteredPlaces = filtered;
+      _isLoading = false;
+    });
+  }
+
+  void _quickSearch(String text) {
+    _searchController.text = text;
+    _runFilter(text);
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+
+    setState(() {
+      _selectedCategoryId = 0;
+      _isNearbyMode = false;
+      _activeSearchLabel = '';
+      _filteredPlaces = _allPlaces;
+    });
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  String _listTitle() {
+    if (_isNearbyMode) return '📍 Yakındaki Mekanlar';
+    if (_activeSearchLabel.isNotEmpty) return '🔎 Arama Sonuçları';
+    return '📍 Tüm Mekanlar';
   }
 
   @override
@@ -254,7 +450,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 14),
                     Container(
-                      margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -269,12 +464,21 @@ class _HomePageState extends State<HomePage> {
                         controller: _searchController,
                         onChanged: _runFilter,
                         decoration: InputDecoration(
-                          hintText: 'Mekan veya lezzet ara...',
+                          hintText: 'Mekan, lezzet veya “yakınımdaki kafe” ara...',
                           hintStyle: TextStyle(color: Colors.grey[400]),
                           prefixIcon: Icon(
                             Icons.search,
                             color: Colors.red[900],
                           ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  onPressed: _clearSearch,
+                                  icon: Icon(
+                                    Icons.close_rounded,
+                                    color: Colors.grey[500],
+                                  ),
+                                )
+                              : null,
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
                             vertical: 14,
@@ -282,12 +486,49 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 34,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _quickSearches.length,
+                        itemBuilder: (context, index) {
+                          final text = _quickSearches[index];
+
+                          return GestureDetector(
+                            onTap: () => _quickSearch(text),
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.18),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.25),
+                                ),
+                              ),
+                              child: Text(
+                                text,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                   ],
                 ),
               ),
             ),
           ),
-
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -309,7 +550,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-
           Expanded(
             child: RefreshIndicator(
               color: Colors.red[900],
@@ -317,29 +557,38 @@ class _HomePageState extends State<HomePage> {
                 await _loadInitialData();
                 await _loadFavorites();
                 await _fetchWeather();
+                _runFilter(_searchController.text);
               },
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredPlaces.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.search_off_rounded,
-                                size: 60,
-                                color: Colors.grey[400],
+                      ? ListView(
+                          children: [
+                            const SizedBox(height: 130),
+                            Icon(
+                              Icons.search_off_rounded,
+                              size: 60,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Sonuç bulunamadı.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 16,
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Sonuç bulunamadı.',
-                                style: TextStyle(
-                                  color: Colors.grey[500],
-                                  fontSize: 16,
-                                ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              '“kafe”, “ciğer”, “tarihi yerler” veya “yakınımdaki kafe” deneyebilirsin.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 13,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
@@ -352,9 +601,9 @@ class _HomePageState extends State<HomePage> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text(
-                                      '📍 Tüm Mekanlar',
-                                      style: TextStyle(
+                                    Text(
+                                      _listTitle(),
+                                      style: const TextStyle(
                                         fontSize: 17,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -495,12 +744,9 @@ class _HomePageState extends State<HomePage> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      _categories
-                          .firstWhere(
-                            (c) => c.id == place.categoryId,
-                            orElse: () => Category(id: 0, name: 'Diğer'),
-                          )
-                          .name,
+                      _categoryName(place.categoryId).isEmpty
+                          ? 'Diğer'
+                          : _categoryName(place.categoryId),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,

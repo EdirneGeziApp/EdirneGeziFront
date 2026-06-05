@@ -66,5 +66,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Konumunuz, yakınınızdaki mekanları ve rota önerilerini göstermek için kullanılır.</string>
 </dict>
 </plist>
