@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
+
 import '../services/api_service.dart';
+import 'location_picker_page.dart';
 
 class SuggestRoutePage extends StatefulWidget {
   const SuggestRoutePage({super.key});
@@ -16,7 +19,8 @@ class _SuggestRoutePageState extends State<SuggestRoutePage> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _durationController = TextEditingController();
   final TextEditingController _distanceController = TextEditingController();
-  final TextEditingController _placesController = TextEditingController();
+
+  final List<Map<String, dynamic>> _stops = [];
 
   bool _isLoading = false;
 
@@ -26,19 +30,98 @@ class _SuggestRoutePageState extends State<SuggestRoutePage> {
     _descriptionController.dispose();
     _durationController.dispose();
     _distanceController.dispose();
-    _placesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _addStop() async {
+    final LatLng? selectedLocation = await Navigator.push<LatLng>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const LocationPickerPage(),
+      ),
+    );
+
+    if (selectedLocation == null || !mounted) return;
+
+    final TextEditingController stopNameController = TextEditingController();
+
+    final String? stopName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Durak Adı'),
+          content: TextField(
+            controller: stopNameController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Örn: Selimiye Camii',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[900],
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                final value = stopNameController.text.trim();
+
+                if (value.isEmpty) return;
+
+                Navigator.pop(dialogContext, value);
+              },
+              child: const Text('Ekle'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (stopName == null || stopName.trim().isEmpty) return;
+
+    setState(() {
+      _stops.add({
+        "name": stopName.trim(),
+        "latitude": selectedLocation.latitude,
+        "longitude": selectedLocation.longitude,
+        "order": _stops.length + 1,
+      });
+    });
+  }
+
+  void _removeStop(int index) {
+    setState(() {
+      _stops.removeAt(index);
+
+      for (int i = 0; i < _stops.length; i++) {
+        _stops[i]["order"] = i + 1;
+      }
+    });
   }
 
   Future<void> _submitRouteSuggestion() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_stops.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Rota oluşturmak için en az 2 durak eklemelisin.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     final success = await _apiService.createRouteSuggestion(
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim(),
-      places: _placesController.text.trim(),
+      stops: _stops,
       duration: _durationController.text.trim(),
       distance: _distanceController.text.trim(),
     );
@@ -64,6 +147,126 @@ class _SuggestRoutePageState extends State<SuggestRoutePage> {
         ),
       );
     }
+  }
+
+  Widget _buildStopsSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.route_rounded, color: Colors.red[900]),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Rota Durakları',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Text(
+                '${_stops.length} durak',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Durakları haritadan sırayla seç. Rota bu sıraya göre oluşturulur.',
+            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          if (_stops.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Henüz durak eklenmedi.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            )
+          else
+            Column(
+              children: List.generate(_stops.length, (index) {
+                final stop = _stops[index];
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 15,
+                        backgroundColor: Colors.red[900],
+                        child: Text(
+                          '${index + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          stop["name"] ?? "-",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => _removeStop(index),
+                        icon: const Icon(Icons.delete_outline_rounded),
+                        color: Colors.red[900],
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _addStop,
+              icon: const Icon(Icons.add_location_alt_rounded),
+              label: const Text('Haritadan Durak Ekle'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red[900],
+                side: BorderSide(color: Colors.red[900]!),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -102,7 +305,6 @@ class _SuggestRoutePageState extends State<SuggestRoutePage> {
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
               const SizedBox(height: 24),
-
               _buildTextField(
                 controller: _titleController,
                 label: 'Rota Adı',
@@ -111,7 +313,6 @@ class _SuggestRoutePageState extends State<SuggestRoutePage> {
                 validatorMessage: 'Rota adı boş bırakılamaz',
               ),
               const SizedBox(height: 14),
-
               _buildTextField(
                 controller: _descriptionController,
                 label: 'Rota Açıklaması',
@@ -121,17 +322,8 @@ class _SuggestRoutePageState extends State<SuggestRoutePage> {
                 validatorMessage: 'Açıklama boş bırakılamaz',
               ),
               const SizedBox(height: 14),
-
-              _buildTextField(
-                controller: _placesController,
-                label: 'Rota Durakları',
-                icon: Icons.place_rounded,
-                hint: 'Örn: Selimiye Camii, Üç Şerefeli Camii, Meriç Köprüsü',
-                maxLines: 3,
-                validatorMessage: 'Rota durakları boş bırakılamaz',
-              ),
+              _buildStopsSection(),
               const SizedBox(height: 14),
-
               _buildTextField(
                 controller: _durationController,
                 label: 'Tahmini Süre',
@@ -140,7 +332,6 @@ class _SuggestRoutePageState extends State<SuggestRoutePage> {
                 validatorMessage: 'Süre boş bırakılamaz',
               ),
               const SizedBox(height: 14),
-
               _buildTextField(
                 controller: _distanceController,
                 label: 'Tahmini Mesafe',
@@ -149,7 +340,6 @@ class _SuggestRoutePageState extends State<SuggestRoutePage> {
                 validatorMessage: 'Mesafe boş bırakılamaz',
               ),
               const SizedBox(height: 28),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

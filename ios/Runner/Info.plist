@@ -68,5 +68,7 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Konumunuz, yakınınızdaki mekanları ve rota önerilerini göstermek için kullanılır.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+    <string>Mekan önerisine ve yorumlara fotoğraf eklemek için galerinize erişim gerekiyor.</string>
 </dict>
 </plist>

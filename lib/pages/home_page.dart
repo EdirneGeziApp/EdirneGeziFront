@@ -45,6 +45,9 @@ class _HomePageState extends State<HomePage> {
     5: Icons.storefront_rounded,
     6: Icons.hot_tub_rounded,
     7: Icons.celebration_rounded,
+    8: Icons.local_cafe_rounded,
+    9: Icons.restaurant_rounded,
+    10: Icons.hotel_rounded,
   };
 
   final List<String> _quickSearches = [

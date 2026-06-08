@@ -37,6 +37,29 @@ class _RouteSuggestionManagementPageState
     });
   }
 
+  List<Map<String, dynamic>> _getStops(Map<String, dynamic> route) {
+    final rawStops = route['stops'] ?? route['Stops'];
+
+    if (rawStops is List) {
+      return rawStops.map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+
+    return [];
+  }
+
+  String _stopsText(Map<String, dynamic> route) {
+    final stops = _getStops(route);
+
+    if (stops.isNotEmpty) {
+      return stops
+          .map((s) => s['name'] ?? s['Name'] ?? '-')
+          .where((name) => name.toString().trim().isNotEmpty)
+          .join(', ');
+    }
+
+    return _read(route, 'places', 'Places');
+  }
+
   Future<void> _approveSuggestion(int index) async {
     final route = _routeSuggestions[index];
     final int id = route['id'] ?? route['Id'];
@@ -108,15 +131,14 @@ class _RouteSuggestionManagementPageState
     final descriptionController = TextEditingController(
       text: route['description'] ?? route['Description'] ?? '',
     );
-    final placesController = TextEditingController(
-      text: route['places'] ?? route['Places'] ?? '',
-    );
     final durationController = TextEditingController(
       text: route['duration'] ?? route['Duration'] ?? '',
     );
     final distanceController = TextEditingController(
       text: route['distance'] ?? route['Distance'] ?? '',
     );
+
+    final stops = _getStops(route);
 
     showDialog(
       context: context,
@@ -130,7 +152,7 @@ class _RouteSuggestionManagementPageState
                 const SizedBox(height: 10),
                 _buildEditField(descriptionController, 'Açıklama', maxLines: 3),
                 const SizedBox(height: 10),
-                _buildEditField(placesController, 'Duraklar', maxLines: 3),
+                _buildStopsPreview(stops),
                 const SizedBox(height: 10),
                 _buildEditField(durationController, 'Süre'),
                 const SizedBox(height: 10),
@@ -149,11 +171,21 @@ class _RouteSuggestionManagementPageState
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
+                if (stops.length < 2) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Rota için en az 2 durak olmalıdır.'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
                 final success = await _apiService.editRouteSuggestion(
                   id: id,
                   title: titleController.text.trim(),
                   description: descriptionController.text.trim(),
-                  places: placesController.text.trim(),
+                  stops: stops,
                   duration: durationController.text.trim(),
                   distance: distanceController.text.trim(),
                 );
@@ -187,6 +219,72 @@ class _RouteSuggestionManagementPageState
           ],
         );
       },
+    );
+  }
+
+  Widget _buildStopsPreview(List<Map<String, dynamic>> stops) {
+    if (stops.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Text(
+          'Bu rota için koordinatlı durak bulunamadı.',
+          style: TextStyle(fontSize: 13),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Duraklar',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ...List.generate(stops.length, (i) {
+            final stop = stops[i];
+            final name = stop['name'] ?? stop['Name'] ?? '-';
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 12,
+                    backgroundColor: Colors.red[900],
+                    child: Text(
+                      '${i + 1}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      name.toString(),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -239,6 +337,7 @@ class _RouteSuggestionManagementPageState
                     itemCount: _routeSuggestions.length,
                     itemBuilder: (context, index) {
                       final route = _routeSuggestions[index];
+                      final stops = _getStops(route);
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 16),
@@ -288,7 +387,12 @@ class _RouteSuggestionManagementPageState
                             const SizedBox(height: 14),
                             _buildInfoRow(
                               Icons.place_rounded,
-                              _read(route, 'places', 'Places'),
+                              _stopsText(route),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildInfoRow(
+                              Icons.route_rounded,
+                              'Durak sayısı: ${stops.length}',
                             ),
                             const SizedBox(height: 8),
                             _buildInfoRow(

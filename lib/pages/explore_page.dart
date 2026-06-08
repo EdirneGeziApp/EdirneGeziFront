@@ -25,6 +25,7 @@ class _ExplorePageState extends State<ExplorePage> {
   List<Place> _nearbyPlaces = [];
   List<Map<String, dynamic>> _allReviews = [];
   List<Map<String, dynamic>> _approvedUserRoutes = [];
+  Map<String, dynamic>? _selectedUserRoute;
   List<Map<String, dynamic>> _topFavoritePlaces = [];
 
   final TextEditingController _userRouteSearchController =
@@ -96,6 +97,9 @@ class _ExplorePageState extends State<ExplorePage> {
     5: Icons.storefront_rounded,
     6: Icons.hot_tub_rounded,
     7: Icons.celebration_rounded,
+    8: Icons.local_cafe_rounded,
+    9: Icons.restaurant_rounded,
+    10: Icons.hotel_rounded,
   };
 
   final Map<int, Color> _categoryColors = {
@@ -106,6 +110,9 @@ class _ExplorePageState extends State<ExplorePage> {
     5: Color(0xFF6C3483),
     6: Color(0xFF0E6655),
     7: Color(0xFF7D6608),
+    8: Color(0xFF6F4E37),
+    9: Color(0xFFE67E22),
+    10: Color(0xFF2980B9),
   };
 
   @override
@@ -162,6 +169,7 @@ class _ExplorePageState extends State<ExplorePage> {
         _allPlaces = places;
         _categories = categories;
         _approvedUserRoutes = approvedUserRoutes;
+        _selectedUserRoute = null;
         _allReviews = allReviews;
         _topFavoritePlaces = topFavoritePlaces;
         _randomPlace = places.isNotEmpty
@@ -449,6 +457,16 @@ class _ExplorePageState extends State<ExplorePage> {
             content: Text('Bu filtreye uygun kullanıcı rotası bulunamadı.'),
           ),
         );
+      } else {
+        setState(() {
+          _selectedUserRoute = filteredRoutes.first;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bir kullanıcı rotası seçildi. Haritada gösterebilirsin.'),
+          ),
+        );
       }
 
       return;
@@ -457,6 +475,7 @@ class _ExplorePageState extends State<ExplorePage> {
     setState(() {
       _isGeneratingRoute = true;
       _suggestedRoutePlaces = [];
+      _selectedUserRoute = null;
     });
 
     try {
@@ -526,10 +545,48 @@ class _ExplorePageState extends State<ExplorePage> {
 
   void _openRouteMap() {
     if (_selectedRouteCategoryId == -1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kullanıcı önerileri metin rota olarak gösteriliyor.'),
-        ),
+      if (_selectedUserRoute == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Haritada göstermek için bir kullanıcı rotası seçmelisin.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final stops = _getRouteStops(_selectedUserRoute!);
+
+      if (stops.length < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Bu kullanıcı rotasında haritada gösterilecek koordinatlı durak yok.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final routePlaces = stops.asMap().entries.map((entry) {
+        final index = entry.key;
+        final stop = entry.value;
+
+        final latValue = stop['latitude'] ?? stop['Latitude'];
+        final lngValue = stop['longitude'] ?? stop['Longitude'];
+
+        return RoutePlace(
+          id: index + 1,
+          name: '${stop['name'] ?? stop['Name'] ?? 'Durak'}',
+          latitude: (latValue as num).toDouble(),
+          longitude: (lngValue as num).toDouble(),
+        );
+      }).toList();
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => RouteMapPage(places: routePlaces)),
       );
       return;
     }
@@ -685,6 +742,29 @@ class _ExplorePageState extends State<ExplorePage> {
     return '${route[lower] ?? route[upper] ?? ''}';
   }
 
+  List<Map<String, dynamic>> _getRouteStops(Map<String, dynamic> route) {
+    final rawStops = route['stops'] ?? route['Stops'];
+
+    if (rawStops is List) {
+      return rawStops.map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+
+    return [];
+  }
+
+  String _getRouteStopsText(Map<String, dynamic> route) {
+    final stops = _getRouteStops(route);
+
+    if (stops.isNotEmpty) {
+      return stops
+          .map((s) => s['name'] ?? s['Name'] ?? '-')
+          .where((name) => name.toString().trim().isNotEmpty)
+          .join(', ');
+    }
+
+    return _readRouteValue(route, 'places', 'Places');
+  }
+
   String _normalizeUserRouteText(String value) {
     return value
         .toLowerCase()
@@ -706,7 +786,7 @@ class _ExplorePageState extends State<ExplorePage> {
     return _approvedUserRoutes.where((route) {
       final title = _readRouteValue(route, 'title', 'Title');
       final description = _readRouteValue(route, 'description', 'Description');
-      final places = _readRouteValue(route, 'places', 'Places');
+      final places = _getRouteStopsText(route);
       final duration = _readRouteValue(route, 'duration', 'Duration');
       final distance = _readRouteValue(route, 'distance', 'Distance');
 
@@ -723,6 +803,7 @@ class _ExplorePageState extends State<ExplorePage> {
       final isAll = text == 'Tümü';
       _userRouteFilterText = isAll ? '' : text;
       _userRouteSearchController.text = isAll ? '' : text;
+      _selectedUserRoute = null;
     });
   }
 
@@ -746,6 +827,7 @@ class _ExplorePageState extends State<ExplorePage> {
           onChanged: (value) {
             setState(() {
               _userRouteFilterText = value;
+              _selectedUserRoute = null;
             });
           },
           decoration: InputDecoration(
@@ -759,6 +841,7 @@ class _ExplorePageState extends State<ExplorePage> {
                     onPressed: () {
                       setState(() {
                         _userRouteFilterText = '';
+                        _selectedUserRoute = null;
                         _userRouteSearchController.clear();
                       });
                     },
@@ -1055,6 +1138,7 @@ class _ExplorePageState extends State<ExplorePage> {
                 setState(() {
                   _selectedRouteCategoryId = value;
                   _suggestedRoutePlaces = [];
+                  _selectedUserRoute = null;
 
                   if (value != -1) {
                     _userRouteFilterText = '';
@@ -1199,88 +1283,133 @@ class _ExplorePageState extends State<ExplorePage> {
                               'description',
                               'Description',
                             );
-                            final places =
-                                _readRouteValue(route, 'places', 'Places');
+                            final places = _getRouteStopsText(route);
+                            final stops = _getRouteStops(route);
                             final duration =
                                 _readRouteValue(route, 'duration', 'Duration');
                             final distance =
                                 _readRouteValue(route, 'distance', 'Distance');
+                            final isSelected = identical(_selectedUserRoute, route);
 
-                            return Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color:
-                                      Colors.red[900]!.withValues(alpha: 0.15),
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedUserRoute = route;
+                                });
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Colors.red[900]!.withValues(alpha: 0.08)
+                                      : Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? Colors.red[900]!
+                                        : Colors.red[900]!
+                                            .withValues(alpha: 0.15),
+                                    width: isSelected ? 1.4 : 1,
+                                  ),
                                 ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    description,
-                                    style: TextStyle(
-                                      color: Colors.grey[700],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.place_rounded,
-                                        size: 15,
-                                        color: Colors.red[900],
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Expanded(
-                                        child: Text(
-                                          places,
-                                          style:
-                                              const TextStyle(fontSize: 12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            title,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
                                         ),
+                                        if (isSelected)
+                                          Icon(
+                                            Icons.check_circle_rounded,
+                                            color: Colors.red[900],
+                                            size: 18,
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      description,
+                                      style: TextStyle(
+                                        color: Colors.grey[700],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.place_rounded,
+                                          size: 15,
+                                          color: Colors.red[900],
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Expanded(
+                                          child: Text(
+                                            places,
+                                            style:
+                                                const TextStyle(fontSize: 12),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (stops.isNotEmpty) ...[
+                                      const SizedBox(height: 5),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.map_rounded,
+                                            size: 15,
+                                            color: Colors.red[900],
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            '${stops.length} koordinatlı durak',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.timer_rounded,
-                                        size: 15,
-                                        color: Colors.red[900],
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        duration,
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Icon(
-                                        Icons.directions_walk_rounded,
-                                        size: 15,
-                                        color: Colors.red[900],
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        distance,
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                    const SizedBox(height: 5),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.timer_rounded,
+                                          size: 15,
+                                          color: Colors.red[900],
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          duration,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Icon(
+                                          Icons.directions_walk_rounded,
+                                          size: 15,
+                                          color: Colors.red[900],
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          distance,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           }).toList(),

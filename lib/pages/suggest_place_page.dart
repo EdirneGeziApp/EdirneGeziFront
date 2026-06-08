@@ -1,6 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
+
 import '../models/category.dart';
 import '../services/api_service.dart';
+import 'location_picker_page.dart';
 
 class SuggestPlacePage extends StatefulWidget {
   const SuggestPlacePage({super.key});
@@ -11,15 +17,16 @@ class SuggestPlacePage extends StatefulWidget {
 
 class _SuggestPlacePageState extends State<SuggestPlacePage> {
   final ApiService _apiService = ApiService();
+  final ImagePicker _picker = ImagePicker();
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
-  final TextEditingController _latController = TextEditingController();
-  final TextEditingController _lngController = TextEditingController();
-  final TextEditingController _imageController = TextEditingController();
 
   List<Category> _categories = [];
   int? _selectedCategoryId;
+  LatLng? _selectedLocation;
+  File? _selectedImage;
+
   bool _isLoading = false;
 
   @override
@@ -31,6 +38,7 @@ class _SuggestPlacePageState extends State<SuggestPlacePage> {
   Future<void> _loadCategories() async {
     final categories = await _apiService.getCategories();
     if (!mounted) return;
+
     setState(() {
       _categories = categories;
       if (categories.isNotEmpty) {
@@ -39,15 +47,54 @@ class _SuggestPlacePageState extends State<SuggestPlacePage> {
     });
   }
 
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.push<LatLng>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const LocationPickerPage(),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedLocation = result;
+      });
+    }
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    final pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 75,
+    );
+
+    if (pickedFile == null) return;
+
+    setState(() {
+      _selectedImage = File(pickedFile.path);
+    });
+  }
+
+  void _removeSelectedImage() {
+    setState(() {
+      _selectedImage = null;
+    });
+  }
+
   Future<void> _submitSuggestion() async {
     final name = _nameController.text.trim();
     final desc = _descController.text.trim();
-    final lat = double.tryParse(_latController.text.trim().replaceAll(',', '.'));
-    final lng = double.tryParse(_lngController.text.trim().replaceAll(',', '.'));
 
-    if (name.isEmpty || desc.isEmpty || lat == null || lng == null || _selectedCategoryId == null) {
+    if (name.isEmpty ||
+        desc.isEmpty ||
+        _selectedCategoryId == null ||
+        _selectedLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen tüm zorunlu alanları doğru doldurun.')),
+        const SnackBar(
+          content: Text(
+            'Lütfen mekan adı, açıklama, kategori ve konum seçimini tamamlayın.',
+          ),
+        ),
       );
       return;
     }
@@ -58,11 +105,9 @@ class _SuggestPlacePageState extends State<SuggestPlacePage> {
       name: name,
       description: desc,
       categoryId: _selectedCategoryId!,
-      latitude: lat,
-      longitude: lng,
-      imageUrl: _imageController.text.trim().isEmpty
-          ? null
-          : _imageController.text.trim(),
+      latitude: _selectedLocation!.latitude,
+      longitude: _selectedLocation!.longitude,
+      imageFile: _selectedImage,
     );
 
     if (!mounted) return;
@@ -71,7 +116,9 @@ class _SuggestPlacePageState extends State<SuggestPlacePage> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mekan öneriniz admin onayına gönderildi.')),
+        const SnackBar(
+          content: Text('Mekan öneriniz admin onayına gönderildi.'),
+        ),
       );
       Navigator.pop(context);
     } else {
@@ -85,9 +132,6 @@ class _SuggestPlacePageState extends State<SuggestPlacePage> {
   void dispose() {
     _nameController.dispose();
     _descController.dispose();
-    _latController.dispose();
-    _lngController.dispose();
-    _imageController.dispose();
     super.dispose();
   }
 
@@ -112,8 +156,172 @@ class _SuggestPlacePageState extends State<SuggestPlacePage> {
           prefixIcon: Icon(icon, color: Colors.red[900]),
           hintText: hint,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 16,
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _locationSelector() {
+    final hasLocation = _selectedLocation != null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                hasLocation ? Icons.check_circle_rounded : Icons.map_rounded,
+                color: hasLocation ? Colors.green : Colors.red[900],
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  hasLocation
+                      ? 'Konum seçildi'
+                      : 'Mekan konumunu haritadan seç',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: hasLocation ? Colors.green[700] : Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: _openLocationPicker,
+              icon: const Icon(Icons.location_on_rounded),
+              label: Text(
+                hasLocation ? 'Konumu Değiştir' : 'Haritadan Konum Seç',
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red[900],
+                side: BorderSide(color: Colors.red[900]!),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _imageSelector() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.image_rounded, color: Colors.red[900]),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Mekan fotoğrafı',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (_selectedImage != null)
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.file(
+                    _selectedImage!,
+                    width: double.infinity,
+                    height: 150,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: _removeSelectedImage,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Text(
+                'Fotoğraf eklemek isteğe bağlıdır.',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: _pickImageFromGallery,
+              icon: const Icon(Icons.photo_library_rounded),
+              label: Text(
+                _selectedImage == null
+                    ? 'Galeriden Fotoğraf Seç'
+                    : 'Fotoğrafı Değiştir',
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red[900],
+                side: BorderSide(color: Colors.red[900]!),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -168,23 +376,8 @@ class _SuggestPlacePageState extends State<SuggestPlacePage> {
                 ),
               ),
             ),
-            _input(
-              controller: _latController,
-              hint: 'Enlem (Latitude) örn: 41.6780',
-              icon: Icons.my_location_rounded,
-              keyboardType: TextInputType.number,
-            ),
-            _input(
-              controller: _lngController,
-              hint: 'Boylam (Longitude) örn: 26.5594',
-              icon: Icons.location_on_rounded,
-              keyboardType: TextInputType.number,
-            ),
-            _input(
-              controller: _imageController,
-              hint: 'Görsel URL (isteğe bağlı)',
-              icon: Icons.image_rounded,
-            ),
+            _locationSelector(),
+            _imageSelector(),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,

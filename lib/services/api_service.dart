@@ -474,25 +474,36 @@ class ApiService {
     required int categoryId,
     required double latitude,
     required double longitude,
-    String? imageUrl,
+    File? imageFile,
   }) async {
     final url = Uri.parse('${ApiConstants.baseUrl}/PlaceSuggestions');
 
     try {
-      final response = await http.post(
-        url,
-        headers: await _getHeaders(withAuth: true),
-        body: jsonEncode({
-          "name": name,
-          "description": description,
-          "categoryId": categoryId,
-          "latitude": latitude,
-          "longitude": longitude,
-          "imageUrl": imageUrl,
-        }),
-      );
+      final request = http.MultipartRequest('POST', url);
 
-      return response.statusCode == 200;
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      request.fields['name'] = name;
+      request.fields['description'] = description;
+      request.fields['categoryId'] = categoryId.toString();
+      request.fields['latitude'] = latitude.toString();
+      request.fields['longitude'] = longitude.toString();
+
+      if (imageFile != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('imageFile', imageFile.path),
+        );
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       return false;
     }
@@ -576,7 +587,7 @@ class ApiService {
   Future<bool> createRouteSuggestion({
     required String title,
     required String description,
-    required String places,
+    required List<Map<String, dynamic>> stops,
     required String duration,
     required String distance,
   }) async {
@@ -589,9 +600,9 @@ class ApiService {
         body: jsonEncode({
           "title": title,
           "description": description,
-          "places": places,
           "duration": duration,
           "distance": distance,
+          "stops": stops,
         }),
       );
 
@@ -659,7 +670,7 @@ class ApiService {
     required int id,
     required String title,
     required String description,
-    required String places,
+    required List<Map<String, dynamic>> stops,
     required String duration,
     required String distance,
   }) async {
@@ -672,9 +683,9 @@ class ApiService {
         body: jsonEncode({
           "title": title,
           "description": description,
-          "places": places,
           "duration": duration,
           "distance": distance,
+          "stops": stops,
         }),
       );
 
