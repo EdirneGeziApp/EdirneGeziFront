@@ -52,7 +52,7 @@ flutter run
 ## Geliştiriciler
 
 * Pınar Yılmaz
-* Proje Ekibi
+* Yusuf Güde
 
 ## Lisans
 
