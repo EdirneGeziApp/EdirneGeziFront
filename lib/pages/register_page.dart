@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
-import 'home_page.dart';
+import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -22,7 +21,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   int _passwordScore = 0;
   String _passwordStrengthText = "Şifre gücü";
-  String _passwordHintText = "Daha güvenli bir şifre için harf, sayı ve özel karakter kullan.";
+  String _passwordHintText =
+      "Daha güvenli bir şifre için harf, sayı ve özel karakter kullan.";
   Color _passwordStrengthColor = Colors.grey;
 
   void _checkPasswordStrength(String password) {
@@ -128,15 +128,11 @@ class _RegisterPageState extends State<RegisterPage> {
       final result = await ApiService().register(userName, email, password);
 
       if (result != null && mounted) {
-        final prefs = await SharedPreferences.getInstance();
-
-        await prefs.setInt('userId', result['userId']);
-        await prefs.setString('userName', result['userName']);
-        await prefs.setBool('isLoggedIn', true);
+        _showMessage("Kayıt başarılı. Lütfen giriş yapın.");
 
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
+          MaterialPageRoute(builder: (context) => const LoginPage()),
           (route) => false,
         );
       }

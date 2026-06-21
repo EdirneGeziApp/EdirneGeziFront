@@ -224,13 +224,22 @@ class AdminUsersPage extends StatefulWidget {
 
 class _AdminUsersPageState extends State<AdminUsersPage> {
   final ApiService _apiService = ApiService();
+  final TextEditingController _searchController = TextEditingController();
+
   List<Map<String, dynamic>> _users = [];
   bool _isLoading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _loadUsers();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUsers() async {
@@ -241,6 +250,21 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       _users = users;
       _isLoading = false;
     });
+  }
+
+  List<Map<String, dynamic>> get _filteredUsers {
+    final query = _searchQuery.toLowerCase().trim();
+
+    if (query.isEmpty) {
+      return _users;
+    }
+
+    return _users.where((user) {
+      final userName = (user['userName'] as String? ?? '').toLowerCase();
+      final email = (user['email'] as String? ?? '').toLowerCase();
+
+      return userName.contains(query) || email.contains(query);
+    }).toList();
   }
 
   Future<void> _deleteUser(int userId, String userName) async {
@@ -275,8 +299,52 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     }
   }
 
+  Widget _buildSearchBar() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value;
+          });
+        },
+        decoration: InputDecoration(
+          hintText: 'Kullanıcı ara...',
+          border: InputBorder.none,
+          prefixIcon: Icon(Icons.search_rounded, color: Colors.red[900]),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchQuery = '';
+                    });
+                  },
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filteredUsers = _filteredUsers;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -289,75 +357,111 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _users.isEmpty
-          ? const Center(child: Text('Kayıtlı kullanıcı yok.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _users.length,
-              itemBuilder: (context, index) {
-                final user = _users[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 8,
+          : Column(
+              children: [
+                _buildSearchBar(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _searchQuery.isEmpty
+                          ? '${_users.length} kullanıcı listeleniyor'
+                          : '${filteredUsers.length} sonuç bulundu',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
-                    ],
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: Colors.red[900],
-                        radius: 22,
-                        child: Text(
-                          (user['userName'] as String? ?? 'U')[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: filteredUsers.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Aramana uygun kullanıcı bulunamadı.',
+                            style: TextStyle(color: Colors.grey[600]),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user['userName'] ?? '',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          itemCount: filteredUsers.length,
+                          itemBuilder: (context, index) {
+                            final user = filteredUsers[index];
+                            final userName =
+                                user['userName'] as String? ?? 'Kullanıcı';
+                            final email = user['email'] as String? ?? '';
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 8,
+                                  ),
+                                ],
                               ),
-                            ),
-                            Text(
-                              user['email'] ?? '',
-                              style: TextStyle(
-                                color: Colors.grey[500],
-                                fontSize: 13,
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: Colors.red[900],
+                                    radius: 22,
+                                    child: Text(
+                                      userName.isNotEmpty
+                                          ? userName[0].toUpperCase()
+                                          : 'U',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          userName,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        Text(
+                                          email,
+                                          style: TextStyle(
+                                            color: Colors.grey[500],
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.delete_rounded,
+                                      color: Colors.red[900],
+                                    ),
+                                    onPressed: () => _deleteUser(
+                                      user['id'] as int,
+                                      userName,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.delete_rounded,
-                          color: Colors.red[900],
-                        ),
-                        onPressed: () => _deleteUser(
-                          user['id'] as int,
-                          user['userName'] as String,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                ),
+              ],
             ),
     );
   }
@@ -549,13 +653,22 @@ class AdminPlacesPage extends StatefulWidget {
 
 class _AdminPlacesPageState extends State<AdminPlacesPage> {
   final ApiService _apiService = ApiService();
+  final TextEditingController _searchController = TextEditingController();
+
   List<Place> _places = [];
   bool _isLoading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _loadPlaces();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPlaces() async {
@@ -566,6 +679,21 @@ class _AdminPlacesPageState extends State<AdminPlacesPage> {
       _places = places;
       _isLoading = false;
     });
+  }
+
+  List<Place> get _filteredPlaces {
+    final query = _searchQuery.toLowerCase().trim();
+
+    if (query.isEmpty) {
+      return _places;
+    }
+
+    return _places.where((place) {
+      final name = place.name.toLowerCase();
+      final description = place.description.toLowerCase();
+
+      return name.contains(query) || description.contains(query);
+    }).toList();
   }
 
   Future<void> _deletePlace(int placeId, String placeName) async {
@@ -598,8 +726,52 @@ class _AdminPlacesPageState extends State<AdminPlacesPage> {
     }
   }
 
+  Widget _buildSearchBar() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value;
+          });
+        },
+        decoration: InputDecoration(
+          hintText: 'Mekan ara...',
+          border: InputBorder.none,
+          prefixIcon: Icon(Icons.search_rounded, color: Colors.red[900]),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchQuery = '';
+                    });
+                  },
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filteredPlaces = _filteredPlaces;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -612,60 +784,97 @@ class _AdminPlacesPageState extends State<AdminPlacesPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _places.length,
-              itemBuilder: (context, index) {
-                final place = _places[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 8,
+          : Column(
+              children: [
+                _buildSearchBar(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _searchQuery.isEmpty
+                          ? '${_places.length} mekan listeleniyor'
+                          : '${filteredPlaces.length} sonuç bulundu',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
-                    ],
+                    ),
                   ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(12),
-                    leading: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        place.imageUrl ?? '',
-                        width: 56,
-                        height: 56,
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) => Container(
-                          width: 56,
-                          height: 56,
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.image_not_supported_rounded),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: filteredPlaces.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Aramana uygun mekan bulunamadı.',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          itemCount: filteredPlaces.length,
+                          itemBuilder: (context, index) {
+                            final place = filteredPlaces[index];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(12),
+                                leading: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    place.imageUrl ?? '',
+                                    width: 56,
+                                    height: 56,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (c, e, s) => Container(
+                                      width: 56,
+                                      height: 56,
+                                      color: Colors.grey[200],
+                                      child: const Icon(
+                                        Icons.image_not_supported_rounded,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                title: Text(
+                                  place.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  place.description,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                trailing: IconButton(
+                                  icon: Icon(
+                                    Icons.delete_rounded,
+                                    color: Colors.red[900],
+                                  ),
+                                  onPressed: () =>
+                                      _deletePlace(place.id, place.name),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      ),
-                    ),
-                    title: Text(
-                      place.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    subtitle: Text(
-                      place.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete_rounded, color: Colors.red[900]),
-                      onPressed: () => _deletePlace(place.id, place.name),
-                    ),
-                  ),
-                );
-              },
+                ),
+              ],
             ),
     );
   }

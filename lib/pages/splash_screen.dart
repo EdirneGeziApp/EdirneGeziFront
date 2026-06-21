@@ -98,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen>
             children: [
               Positioned.fill(
                 child: Image.asset(
-                  'assets/images/edirne_splash.png',
+                  'assets/images/splash.png',
                   height: screenHeight,
                   fit: BoxFit.fitHeight,
                   alignment: Alignment.center,
