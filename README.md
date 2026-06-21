@@ -1,17 +1,59 @@
-# edirne_gezi_app
+# Edirne Gezi Rehberi - Frontend
 
-A new Flutter project.
+Edirne Gezi Rehberi, kullanıcıların Edirne'deki tarihi ve turistik mekanları keşfetmesini sağlayan mobil uygulamadır.
 
-## Getting Started
+## Özellikler
 
-This project is a starting point for a Flutter application.
+* Kullanıcı kayıt ve giriş sistemi
+* JWT tabanlı kimlik doğrulama
+* Mekan listeleme
+* Mekan detay sayfası
+* Favorilere ekleme
+* Yorum ve puanlama
+* Harita üzerinde mekan görüntüleme
+* Yakındaki mekanları görüntüleme
+* Kategori bazlı keşif
+* Kullanıcı mekan önerileri
+* Kullanıcı rota önerileri
+* Admin paneli
+* Kişiselleştirilmiş öneriler
 
-A few resources to get you started if this is your first Flutter project:
+## Kullanılan Teknolojiler
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+* Flutter
+* Dart
+* Shared Preferences
+* Flutter Map
+* REST API
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Proje Yapısı
+
+```text
+lib/
+ ├── models/
+ ├── pages/
+ ├── services/
+ ├── constants/
+ └── main.dart
+```
+
+## Kurulum
+
+```bash
+git clone https://github.com/EdirneGeziApp/EdirneGeziFront.git
+
+cd EdirneGeziFront
+
+flutter pub get
+
+flutter run
+```
+
+## Geliştiriciler
+
+* Pınar Yılmaz
+* Proje Ekibi
+
+## Lisans
+
+Bu proje eğitim amaçlı geliştirilmiştir.
